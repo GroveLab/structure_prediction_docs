@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequence Generator for Biomolecular Models</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        textarea {
+            width: 100%;
+            height: 80px;
+            margin-top: 5px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .output {
+            background-color: #f6f8fa;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .button-group {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .model-specific {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+        }
+        .hidden {
+            display: none;
+        }
+        label {
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sequence Generator for Biomolecular Models</h1>
+    <p>Enter up to four protein sequences and their names, then select the model to generate formatted output.</p>
+
+    <div class="input-group">
+        <label for="name1">Protein Name 1</label>
+        <input type="text" id="name1" placeholder="Enter protein name" />
+        <label for="seq1">Sequence 1</label>
+        <textarea id="seq1" placeholder="Enter protein sequence"></textarea>
+    </div>
+
+    <div class="input-group">
+        <label for="name2">Protein Name 2 (optional)</label>
+        <input type="text" id="name2" placeholder="Enter protein name" />
+        <label for="seq2">Sequence 2</label>
+        <textarea id="seq2" placeholder="Enter protein sequence"></textarea>
+    </div>
+
+    <div class="input-group">
+        <label for="name3">Protein Name 3 (optional)</label>
+        <input type="text" id="name3" placeholder="Enter protein name" />
+        <label for="seq3">Sequence 3</label>
+        <textarea id="seq3" placeholder="Enter protein sequence"></textarea>
+    </div>
+
+    <div class="input-group">
+        <label for="name4">Protein Name 4 (optional)</label>
+        <input type="text" id="name4" placeholder="Enter protein name" />
+        <label for="seq4">Sequence 4</label>
+        <textarea id="seq4" placeholder="Enter protein sequence"></textarea>
+    </div>
+
+    <div class="model-selection">
+        <label for="model">Select Model:</label>
+        <select id="model" onchange="handleModelChange()">
+            <option value="boltz">Boltz-1</option>
+            <option value="chai">Chai-1</option>
+            <option value="colabfold">ColabFold</option>
+            <option value="esmfold">ESMFold</option>
+            <option value="alphafold3">AlphaFold3</option>
+        </select>
+
+        <div id="af3options" class="model-specific hidden">
+            <label for="numPredictions">Number of Predictions:</label>
+            <input type="number" id="numPredictions" min="1" max="10" value="1" />
+            <small>Each prediction will use a different random seed (1-10000)</small>
+        </div>
+    </div>
+
+    <div class="button-group">
+        <button onclick="generateOutput()">Generate Output</button>
+        <button onclick="saveOutput()">Save File</button>
+        <button onclick="copyToClipboard()">Copy to Clipboard</button>
+    </div>
+
+    <h2>Generated Output:</h2>
+    <div class="output" id="output"></div>
+
+    <script>
+        function cleanSequence(input) {
+            return input.replace(/[^A-Za-z]/g, '').toUpperCase();
+        }
+
+        function handleModelChange() {
+            const model = document.getElementById('model').value;
+            const af3options = document.getElementById('af3options');
+            af3options.classList.toggle('hidden', model !== 'alphafold3');
+        }
+
+        function generateRandomSeeds(count) {
+            const seeds = [];
+            for (let i = 0; i < count; i++) {
+                seeds.push(Math.floor(Math.random() * 10001));
+            }
+            return seeds;
+        }
+
+        function generateAlphaFold3JSON(sequences, names) {
+            const numPredictions = parseInt(document.getElementById('numPredictions').value) || 1;
+            
+            // Filter out empty sequences and create protein objects
+            const proteinSequences = sequences.map((seq, i) => ({
+                protein: {
+                    id: String.fromCharCode(65 + i),  // A, B, C, D
+                    sequence: seq,
+                }
+            })).filter(item => item.protein.sequence);
+
+            // Generate the complete JSON structure
+            const jsonOutput = {
+                name: names.filter(n => n).join('_') || 'UnnamedComplex',
+                modelSeeds: generateRandomSeeds(numPredictions),
+                sequences: proteinSequences,
+                dialect: "alphafold3",
+                version: 2
+            };
+
+            return JSON.stringify(jsonOutput, null, 2);
+        }
+
+        function generateOutput() {
+            const seqs = [
+                { sequence: cleanSequence(document.getElementById('seq1').value.trim()), name: document.getElementById('name1').value.trim() },
+                { sequence: cleanSequence(document.getElementById('seq2').value.trim()), name: document.getElementById('name2').value.trim() },
+                { sequence: cleanSequence(document.getElementById('seq3').value.trim()), name: document.getElementById('name3').value.trim() },
+                { sequence: cleanSequence(document.getElementById('seq4').value.trim()), name: document.getElementById('name4').value.trim() }
+            ].filter(item => item.sequence);
+
+            const sequences = seqs.map(item => item.sequence);
+            const names = seqs.map(item => item.name);
+            const model = document.getElementById('model').value;
+            let output = '';
+
+            if (model === 'alphafold3') {
+                output = generateAlphaFold3JSON(sequences, names);
+            } else if (model === 'boltz') {
+                seqs.forEach((item, i) => {
+                    const chainId = String.fromCharCode(65 + i);
+                    output += `>${chainId}|protein|\n${item.sequence}\n`;
+                });
+            } else if (model === 'chai') {
+                seqs.forEach((item, i) => {
+                    output += `>protein|name=${item.name || `Sequence${i + 1}`}\n${item.sequence}\n`;
+                });
+            } else if (model === 'colabfold' || model === 'esmfold') {
+                const complexName = names.filter(n => n).join('_') || 'UnnamedComplex';
+                output += `>${complexName}\n${sequences.join(':')}\n`;
+            }
+
+            document.getElementById('output').textContent = output;
+        }
+
+        function saveOutput() {
+            const output = document.getElementById('output').textContent;
+            if (!output.trim()) {
+                alert('Please generate output before saving.');
+                return;
+            }
+
+            const model = document.getElementById('model').value;
+            const names = [
+                document.getElementById('name1').value.trim(),
+                document.getElementById('name2').value.trim(),
+                document.getElementById('name3').value.trim(),
+                document.getElementById('name4').value.trim()
+            ].filter(name => name);
+
+            const complexName = names.join('_') || 'UnnamedComplex';
+            const extension = model === 'alphafold3' ? 'json' : 'fasta';
+            const fileName = `${complexName}_${model}.${extension}`.replace(/\s+/g, '_');
+
+            const blob = new Blob([output], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = fileName;
+            a.click();
+        }
+
+        function copyToClipboard() {
+            const output = document.getElementById('output').textContent;
+            if (!output.trim()) {
+                alert('Please generate output before copying.');
+                return;
+            }
+
+            navigator.clipboard.writeText(output)
+                .then(() => alert('Output copied to clipboard!'))
+                .catch(err => alert('Failed to copy output: ' + err));
+        }
+    </script>
+</body>
+</html>

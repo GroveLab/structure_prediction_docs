@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Structure Prediction Models: Usage Guide</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            border-bottom: 2px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+        h2 {
+            margin-top: 24px;
+            margin-bottom: 16px;
+            padding-bottom: 0.3em;
+            border-bottom: 1px solid #eaecef;
+        }
+        .navigation {
+            background-color: #f6f8fa;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .navigation a {
+            margin-right: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Structure Prediction Models: Usage Guide</h1>
+    
+    <div class="navigation">
+        <h3>Quick Navigation</h3>
+        <a href="file:///home/joe/Structure_Prediction/Inputs">Input Directory</a>
+        <a href="file:///home/joe/Structure_Prediction/Outputs">Output Directory</a>
+        <a href="./input_generator.html">Individual Input Generator</a>
+        <a href="./batch_input_generator.html">Batch Input Generator</a>
+        <a href="./format-converter.html">Format Converter</a>
+    </div>
+    
+    <h2>AlphaFold3</h2>
+    <p>
+        AlphaFold3, developed by DeepMind, predicts the 3D structures of proteins and other biological molecules with high accuracy. It is a significant advancement over AlphaFold2, capable of modeling interactions between proteins, nucleic acids, small molecules, and ions. AlphaFold3 introduces the "Pairformer" architecture and a diffusion-based sampling strategy to iteratively refine structure predictions. It assembles MSAs locally using Jackhmmer, allowing for improved accuracy in sequence alignment.
+    </p>
+    <p>
+        GitHub Repository: <a href="https://github.com/google-deepmind/alphafold3">https://github.com/google-deepmind/alphafold3</a>
+    </p>
+    <p><a href="./af3_detailed.html">Detailed Instructions</a></p>
+    
+    <h2>ColabFold-AlphaFold2</h2>
+    <p>
+        ColabFold-AlphaFold2 is a community-developed implementation of AlphaFold2 that enhances accessibility by allowing users to run structure predictions efficiently via Google Colab or local installations. It retains the core deep-learning-based structure prediction capabilities of AlphaFold2 while using MMseqs2 for rapid MSA generation. This implementation optimizes computational efficiency and enables faster predictions, making it a widely used alternative for researchers needing scalable protein modeling solutions.
+    </p>
+    <p>
+        GitHub Repository: <a href="https://github.com/YoshitakaMo/localcolabfold">https://github.com/YoshitakaMo/localcolabfold</a>
+    </p>
+    <p><a href="./colabfold_detailed.html">Detailed Instructions</a></p>
+    
+    <h2>Boltz-1</h2>
+    <p>
+        Boltz-1 is an open-source AI model developed by MIT researchers that predicts the 3D structures of proteins, RNA, DNA, and small molecules. It handles modified residues, covalent ligands, and glycans, and can condition generation on pocket residues. Boltz-1 matches or outperforms AlphaFold3 in performance. It uses the MMseqs2 server for MSA generation.
+    </p>
+    <p>
+        GitHub Repository: <a href="https://github.com/jwohlwend/boltz">https://github.com/jwohlwend/boltz</a>
+    </p>
+    <p><a href="./boltz_detailed.html">Detailed Instructions</a></p>
+    
+    <h2>Chai-1</h2>
+    <p>
+        Chai-1 is another AlphaFold3-like model, but it can utilize both MSAs and protein language model embeddings (derived from ESM-2) as inputs. It employs the MMseqs2 server for MSA generation.
+    </p>
+    <p>
+        GitHub Repository: <a href="https://github.com/chaidiscovery/chai-lab">https://github.com/chaidiscovery/chai-lab</a>
+    </p>
+    <p><a href="./chai_detailed.html">Detailed Instructions</a></p>
+    
+    <h2>ESMFold</h2>
+    <p>
+        ESMFold is a protein structure prediction model developed by Meta AI. It predicts protein structures using a large language model trained on protein sequences without relying on MSAs.
+    </p>
+    <p>
+        GitHub Repository: <a href="https://github.com/facebookresearch/esm">https://github.com/facebookresearch/esm</a>
+    </p>
+    <p><a href="./esmfold_detailed.html">Detailed Instructions</a></p>
+</body>
+</html>

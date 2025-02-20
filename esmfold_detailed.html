@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESMFold: Detailed Instructions</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2 {
+            border-bottom: 2px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+        .code-block {
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            padding: 8px;
+            position: relative;
+            overflow: auto;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+        }
+        .copy-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            padding: 4px 8px;
+            background-color: #fff;
+            border: 1px solid #d1d5da;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 1;
+        }
+        .options {
+            margin-top: 20px;
+        }
+    </style>
+    <script>
+        function generateCommand() {
+            let gpu0 = document.getElementById("gpu0").checked;
+            let gpu1 = document.getElementById("gpu1").checked;
+            let cudaDevices = gpu0 ? "CUDA_VISIBLE_DEVICES=0 " : gpu1 ? "CUDA_VISIBLE_DEVICES=1 " : "";
+            
+            let inputFile = document.getElementById("input_file").value;
+            let outDir = document.getElementById("out_dir").value;
+            let numRecycles = document.getElementById("num_recycles").value;
+            let chunkEnabled = document.getElementById("chunk_enabled").checked;
+            let chunkSize = chunkEnabled ? document.getElementById("chunk_size").value : "";
+            
+            let command = `${cudaDevices}esm-fold -i ${inputFile} \\
+    --pdb ${outDir} \\
+    --num-recycles ${numRecycles}`;
+            
+            if (chunkEnabled) {
+                command += ` \\
+    --chunk-size ${chunkSize}`;
+            }
+            
+            document.getElementById("generated_command").textContent = command.trim();
+        }
+        
+        function copyCode(button) {
+            const pre = button.nextElementSibling;
+            const code = pre.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                button.textContent = 'Failed to copy';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                }, 2000);
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>ESMFold: Detailed Instructions</h1>
+    
+    <p><a href="./Structure_Prediction_Guide.html">Back to Main Navigation</a></p>
+    
+    <h2>Check GPU Usage</h2>
+    <p>Before running ESMFold, ensure your GPUs are available by running:</p>
+    <div class="code-block">
+        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+        <pre><code>watch nvidia-smi</code></pre>
+    </div>
+    
+    <h2>Activate the ESMFold Environment</h2>
+    <p>Before running a prediction, activate the Conda environment:</p>
+    <div class="code-block">
+        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+        <pre><code>conda activate esmfold</code></pre>
+    </div>
+    
+    <h2>Customize Your Prediction</h2>
+    <p>Adjust the settings below to generate a command for ESMFold.</p>
+    <div class="options">
+        <label><input type="checkbox" id="gpu0"> Use GPU 0</label>
+        <label><input type="checkbox" id="gpu1"> Use GPU 1</label><br><br>
+        <label>Input File: <input type="text" id="input_file" value="/home/joe/Structure_Prediction/Inputs/ESMFold_Inputs/YOUR_FOLDER_NAME_GOES_HERE/YOUR_FILE.fasta" style="width: 600px;"> (ESMFold accepts batches of predictions as a single multifasta, not individual fastas)</label><br><br>
+        <label>Output Directory: <input type="text" id="out_dir" value="/home/joe/Structure_Prediction/Outputs/ESMFold_Outputs/YOUR_FOLDER_NAME_GOES_HERE" style="width: 600px;"></label><br><br>
+        <label>Number of Recyles: <input type="number" id="num_recycles" value="4" min="1"> (Advanced option)</label><br><br>
+        <label><input type="checkbox" id="chunk_enabled"> Enable Chunking</label>
+        <label>Chunk Size: 
+            <select id="chunk_size">
+                <option value="128">128</option>
+                <option value="64">64</option>
+                <option value="32">32</option>
+            </select> (Advanced option)
+        </label><br><br>
+        <button onclick="generateCommand()">Generate Command</button>
+    </div>
+    
+    <h3>Generated Command</h3>
+    <div class="code-block">
+        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+        <pre><code id="generated_command"></code></pre>
+    </div>
+</body>
+</html>

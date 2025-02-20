@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biomolecular Format Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .input-section, .preview-section {
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+        .preview-section {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .file-content {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow-x: auto;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        button, .file-input-label {
+            padding: 10px 20px;
+            background-color: #4299e1;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 14px;
+        }
+        button:hover, .file-input-label:hover {
+            background-color: #2b6cb0;
+        }
+        button:disabled, .file-input-label.disabled {
+            background-color: #a0aec0;
+            cursor: not-allowed;
+        }
+        #fileInput {
+            display: none;
+        }
+        select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.success {
+            background-color: #c6f6d5;
+            color: #276749;
+        }
+        .status.error {
+            background-color: #fed7d7;
+            color: #c53030;
+        }
+        .complex-preview {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        .complex-preview h3 {
+            margin-top: 0;
+            color: #2c5282;
+        }
+    </style>
+</head>
+<body>
+    <h1>Biomolecular Format Converter</h1>
+    <p>Convert between different biomolecular sequence formats. Choose input format before selecting files</p>
+
+    <div class="container">
+        <div class="input-section">
+            <div class="controls">
+                <input type="file" id="fileInput" multiple accept=".fasta,.txt,.json"/>
+                <label for="fileInput" class="file-input-label">Select Files</label>
+                <select id="inputFormat" onchange="handleInputFormatChange()">
+                    <option value="">Select Input Format</option>
+                    <option value="boltz">Boltz-1</option>
+                    <option value="chai">Chai-1</option>
+                    <option value="colabfold">ColabFold</option>
+                    <option value="esmfold">ESMFold</option>
+                    <option value="alphafold3">AlphaFold3</option>
+                </select>
+                <select id="outputFormat" onchange="handleOutputFormatChange()">
+                    <option value="">Select Output Format</option>
+                    <option value="boltz">Boltz-1</option>
+                    <option value="chai">Chai-1</option>
+                    <option value="colabfold">ColabFold</option>
+                    <option value="esmfold">ESMFold</option>
+                    <option value="alphafold3">AlphaFold3</option>
+                </select>
+                <button id="previewButton" onclick="updatePreview()" disabled>Update Preview</button>
+                <button id="convertButton" onclick="convertFiles()" disabled>Convert</button>
+            </div>
+
+            <div id="formatInfo" class="format-info">
+                Select an input format to see format details...
+            </div>
+
+            <div id="status" class="status"></div>
+        </div>
+
+        <div class="preview-section">
+            <h2>Preview</h2>
+            <div id="preview"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentFiles = [];
+        let parsedData = [];
+
+        const formatInfo = {
+            boltz: "Boltz format: FASTA with chain IDs (>A|protein|)",
+            chai: "Chai format: FASTA with protein names (>protein|name=...)",
+            colabfold: "ColabFold format: Single FASTA with colon-separated sequences",
+            esmfold: "ESMFold format: Similar to ColabFold",
+            alphafold3: "AlphaFold3 format: JSON with protein IDs and sequences"
+        };
+
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+        function cleanSequence(sequence) {
+            return sequence
+                .replace(/[\r\n\s]+/g, '')           // Remove whitespace and line endings
+                .replace(/[^ACDEFGHIKLMNPQRSTVWY]/gi, '') // Keep only valid amino acids
+                .toUpperCase();                      // Standardize to uppercase
+        }
+
+        function getBaseFileName(originalName) {
+            const methodNames = ['boltz', 'chai', 'colabfold', 'esmfold', 'alphafold3'];
+            let name = originalName.toLowerCase();
+            name = name.replace(/\.(fasta|json|txt)$/, '');
+            for (const method of methodNames) {
+                name = name.replace(`_${method}`, '');
+            }
+            return originalName.slice(0, name.length);
+        }
+
+        async function handleFileSelect(event) {
+            currentFiles = Array.from(event.target.files);
+            parsedData = []; // Reset parsed data
+            document.getElementById('preview').innerHTML = '';
+            
+            if (currentFiles.length > 0) {
+                showStatus(`Selected ${currentFiles.length} file(s)`, 'success');
+            }
+            
+            validateButtons();
+        }
+
+        function handleInputFormatChange() {
+            const format = document.getElementById('inputFormat').value;
+            document.getElementById('formatInfo').textContent = formatInfo[format] || "Select an input format...";
+            parsedData = []; // Reset parsed data
+            document.getElementById('preview').innerHTML = '';
+            validateButtons();
+        }
+
+        function handleOutputFormatChange() {
+            validateButtons();
+        }
+
+        function validateButtons() {
+            const inputFormat = document.getElementById('inputFormat').value;
+            const outputFormat = document.getElementById('outputFormat').value;
+            const hasFiles = currentFiles.length > 0;
+            
+            document.getElementById('previewButton').disabled = !(inputFormat && hasFiles);
+            document.getElementById('convertButton').disabled = !(inputFormat && outputFormat && hasFiles && parsedData.length > 0);
+        }
+
+        async function parseInput(content, format) {
+            switch (format) {
+                case 'alphafold3': {
+                    const data = JSON.parse(content);
+                    const sequences = data.sequences.map(seqObj => ({
+                        name: seqObj.protein.id,
+                        sequence: cleanSequence(seqObj.protein.sequence)
+                    }));
+                    return {
+                        name: data.name || 'complex',
+                        sequences: sequences
+                    };
+                }
+                case 'boltz':
+                case 'chai': {
+                    const sequences = [];
+                    const lines = content.split(/\r?\n/);
+                    let currentSeq = { name: '', sequence: '' };
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('>')) {
+                            if (currentSeq.name) {
+                                currentSeq.sequence = cleanSequence(currentSeq.sequence);
+                                sequences.push({...currentSeq});
+                            }
+                            currentSeq = { name: line.substring(1).trim(), sequence: '' };
+                        } else if (line.trim()) {
+                            currentSeq.sequence += line.trim();
+                        }
+                    }
+                    if (currentSeq.name) {
+                        currentSeq.sequence = cleanSequence(currentSeq.sequence);
+                        sequences.push(currentSeq);
+                    }
+                    return { name: 'complex', sequences };
+                }
+                case 'colabfold':
+                case 'esmfold': {
+                    const lines = content.split(/\r?\n/);
+                    const name = lines[0].substring(1).trim();
+                    const sequences = lines[1].split(':').map((seq, i) => ({
+                        name: String.fromCharCode(65 + i),
+                        sequence: cleanSequence(seq)
+                    }));
+                    return { name, sequences };
+                }
+                default:
+                    throw new Error('Unsupported input format');
+            }
+        }
+
+        function formatOutput(data, format) {
+            switch (format) {
+                case 'alphafold3':
+                    return JSON.stringify({
+                        name: data.name || 'complex',
+                        modelSeeds: [Math.floor(Math.random() * 10000) + 1],
+                        sequences: data.sequences.map(seq => ({
+                            protein: {
+                                id: seq.name,
+                                sequence: seq.sequence,
+                            }
+                        })),
+                        dialect: "alphafold3",
+                        version: 2
+                    }, null, 2);
+                case 'boltz':
+                    return data.sequences.map(seq => 
+                        `>${seq.name}|protein|\n${seq.sequence}`
+                    ).join('\n');
+                case 'chai':
+                    return data.sequences.map(seq => 
+                        `>protein|name=${seq.name}\n${seq.sequence}`
+                    ).join('\n');
+                case 'colabfold':
+                case 'esmfold':
+                    return `>${data.name}\n${data.sequences.map(seq => seq.sequence).join(':')}`;
+                default:
+                    throw new Error('Unsupported output format');
+            }
+        }
+
+        async function updatePreview() {
+            const inputFormat = document.getElementById('inputFormat').value;
+            const outputFormat = document.getElementById('outputFormat').value;
+            
+            try {
+                // Parse input files if not already parsed
+                if (parsedData.length === 0) {
+                    parsedData = [];
+                    for (const file of currentFiles) {
+                        const content = await file.text();
+                        const parsed = await parseInput(content, inputFormat);
+                        parsedData.push(parsed);
+                    }
+                }
+
+                const previewDiv = document.getElementById('preview');
+                previewDiv.innerHTML = '';
+
+                for (let i = 0; i < parsedData.length; i++) {
+                    const preview = document.createElement('div');
+                    preview.className = 'complex-preview';
+
+                    preview.innerHTML = `
+                        <h3>${currentFiles[i].name} - Parsed Structure:</h3>
+                        <div class="file-content">${JSON.stringify(parsedData[i], null, 2)}</div>
+                    `;
+
+                    if (outputFormat) {
+                        const formatted = formatOutput(parsedData[i], outputFormat);
+                        preview.innerHTML += `
+                            <h3>Preview in ${outputFormat} format:</h3>
+                            <div class="file-content">${formatted}</div>
+                        `;
+                    }
+
+                    previewDiv.appendChild(preview);
+                }
+
+                validateButtons();
+                showStatus('Preview updated successfully', 'success');
+            } catch (err) {
+                parsedData = [];
+                showStatus('Error updating preview: ' + err.message, 'error');
+                validateButtons();
+            }
+        }
+
+        async function convertFiles() {
+            const outputFormat = document.getElementById('outputFormat').value;
+            
+            try {
+                // For ESMFold/ColabFold, combine all files into one if multiple files selected
+                if ((outputFormat === 'esmfold' || outputFormat === 'colabfold') && parsedData.length > 1) {
+                    const combinedContent = parsedData.map((data, i) => {
+                        const formatted = formatOutput(data, outputFormat);
+                        return formatted;
+                    }).join('\n\n');
+                    
+                    const blob = new Blob([combinedContent], { type: 'text/plain' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `combined_${outputFormat}.fasta`;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                } else {
+                    // For other formats or single files, create a zip
+                    const zip = new JSZip();
+                    
+                    for (let i = 0; i < parsedData.length; i++) {
+                        const formatted = formatOutput(parsedData[i], outputFormat);
+                        const extension = outputFormat === 'alphafold3' ? 'json' : 'fasta';
+                        const baseName = getBaseFileName(currentFiles[i].name);
+                        const fileName = `${baseName}_${outputFormat}.${extension}`;
+                        
+                        zip.file(fileName, formatted);
+                    }
+                    
+                    const zipContent = await zip.generateAsync({type: 'blob'});
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(zipContent);
+                    a.download = parsedData.length === 1 ? 
+                        `${getBaseFileName(currentFiles[0].name)}_${outputFormat}.${outputFormat === 'alphafold3' ? 'json' : 'fasta'}` : 
+                        `converted_sequences_${outputFormat}.zip`;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                }
+                
+                showStatus(`Successfully converted ${parsedData.length} files`, 'success');
+            } catch (err) {
+                showStatus('Error converting files: ' + err.message, 'error');
+            }
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+    </script>
+</body>
+</html>

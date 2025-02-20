@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Boltz-1: Detailed Instructions</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2 {
+            border-bottom: 2px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+        .code-block {
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            padding: 8px;
+            position: relative;
+            overflow: auto;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+        }
+        .copy-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            padding: 4px 8px;
+            background-color: #fff;
+            border: 1px solid #d1d5da;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 1;
+        }
+        .options {
+            margin-top: 20px;
+        }
+    </style>
+    <script>
+        function generateCommand() {
+            let gpu0 = document.getElementById("gpu0").checked;
+            let gpu1 = document.getElementById("gpu1").checked;
+            let cudaDevices = gpu0 ? "CUDA_VISIBLE_DEVICES=0 " : gpu1 ? "CUDA_VISIBLE_DEVICES=1 " : "";
+            
+            let inputDir = document.getElementById("input_dir").value;
+            let outDir = document.getElementById("out_dir").value;
+            let recyclingSteps = document.getElementById("recycling_steps").value;
+            let diffusionSamples = document.getElementById("diffusion_samples").value;
+            let writeFullPae = document.getElementById("write_full_pae").checked ? "--write_full_pae" : "";
+            let outputFormat = document.getElementById("output_format").value;
+            let useMsaServer = document.getElementById("use_msa_server").checked ? "--use_msa_server" : "";
+            
+            // Build command parts array and filter out empty strings
+            let commandParts = [
+                `${cudaDevices}boltz predict ${inputDir}`,
+                `--out_dir ${outDir}`,
+                `--recycling_steps ${recyclingSteps}`,
+                `--diffusion_samples ${diffusionSamples}`,
+                writeFullPae,
+                `--output_format ${outputFormat}`,
+                useMsaServer
+            ].filter(part => part.trim() !== "");
+            
+            // Join with backslash and newline, properly indented
+            let command = commandParts.join(" \\\n    ");
+            
+            document.getElementById("generated_command").textContent = command;
+        }
+        
+        function copyCode(button) {
+            const pre = button.nextElementSibling;
+            const code = pre.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                button.textContent = 'Failed to copy';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                }, 2000);
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Boltz-1: Detailed Instructions</h1>
+    
+    <p><a href="./Structure_Prediction_Guide.html">Back to Main Navigation</a></p>
+    
+    <h2>Check GPU Usage</h2>
+    <p>Before running Boltz-1, ensure that your GPUs are available and not in use. Run the following command to monitor GPU activity:</p>
+    <div class="code-block">
+        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+        <pre><code>watch nvidia-smi</code></pre>
+    </div>
+    
+    <h2>Activate the Boltz-1 Environment</h2>
+    <p>Before running a prediction, activate the Conda environment for Boltz-1:</p>
+    <div class="code-block">
+        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+        <pre><code>conda activate Boltz1_2025</code></pre>
+    </div>
+    
+    <h2>Customise Your Prediction</h2>
+    <p>This section allows you to generate a command-line prompt to run Boltz-1 with custom parameters. Adjust the settings below to fit your needs, and then generate a command that can be copied and executed in your terminal.</p>
+    <div class="options">
+        <label><input type="checkbox" id="gpu0"> Use GPU 0</label>
+        <label><input type="checkbox" id="gpu1"> Use GPU 1</label><br><br>
+        <label>Input Directory: <input type="text" id="input_dir" value="/home/joe/Structure_Prediction/Inputs/Boltz_Inputs/YOUR_FOLDER_NAME_GOES_HERE" style="width: 600px;"></label><br><br>
+        <label>Output Directory: <input type="text" id="out_dir" value="/home/joe/Structure_Prediction/Outputs/Boltz_Outputs/YOUR_FOLDER_NAME_GOES_HERE" style="width: 600px;"></label><br><br>
+        <label>Recycling Steps: <input type="number" id="recycling_steps" value="3" min="1"></label><br><br>
+        <label>Diffusion Samples: <input type="number" id="diffusion_samples" value="5" min="1"></label><br><br>
+        <label>Output Format: 
+            <select id="output_format">
+                <option value="pdb">PDB</option>
+                <option value="mmcif">MMCIF</option>
+            </select>
+        </label><br><br>
+        <label><input type="checkbox" id="write_full_pae" checked> Write Full PAE</label><br><br>
+        <label><input type="checkbox" id="use_msa_server" checked> Use MSA Server</label><br><br>
+        <button onclick="generateCommand()">Generate Command</button>
+    </div>
+    
+    <h3>Generated Command</h3>
+    <div class="code-block">
+        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+        <pre><code id="generated_command"></code></pre>
+    </div>
+</body>
+</html>

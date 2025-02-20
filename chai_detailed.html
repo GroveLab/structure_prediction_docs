@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chai-1: Detailed Instructions</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2 {
+            border-bottom: 2px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+        .code-block {
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            padding: 16px;
+            position: relative;
+            overflow: auto;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+        }
+        .copy-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            padding: 4px 8px;
+            background-color: #fff;
+            border: 1px solid #d1d5da;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 1;
+        }
+        .options {
+            margin-top: 20px;
+        }
+    </style>
+    <script>
+        function generateCommand() {
+            let gpu0 = document.getElementById("gpu0").checked;
+            let gpu1 = document.getElementById("gpu1").checked;
+            let cudaDevices = gpu0 ? "CUDA_VISIBLE_DEVICES=0 " : gpu1 ? "CUDA_VISIBLE_DEVICES=1 " : "";
+            
+            let inputDir = document.getElementById("input_dir").value;
+            let outDir = document.getElementById("out_dir").value;
+            let useMsaServer = document.getElementById("use_msa_server").checked ? "--use-msa-server" : "";
+            let useEsmEmbeddings = document.getElementById("use_msa_server").checked ? "" : "--use-esm-embeddings";
+            let numTrunkRecycles = document.getElementById("num_trunk_recycles").value;
+            let numDiffnSamples = document.getElementById("num_diffn_samples").value;
+            
+            let command = `for file in ${inputDir}/*.fasta; do \n`
+                + `    base_name=$(basename "$file" .fasta) \n`
+                + `    output_subdir=${outDir}/$base_name \n`
+                + `    mkdir -p "$output_subdir" && \n`
+                + `    ${cudaDevices}chai fold ${useMsaServer} ${useEsmEmbeddings} --num-trunk-recycles ${numTrunkRecycles} --num-diffn-samples ${numDiffnSamples} "$file" "$output_subdir"; \n`
+                + `done`;
+            
+            document.getElementById("generated_command").textContent = command;
+        }
+        
+        function copyCode(button) {
+            let codeElement = button.nextElementSibling;
+            let code = codeElement.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                button.textContent = 'Failed to copy';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                }, 2000);
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Chai-1: Detailed Instructions</h1>
+    
+    <p><a href="./Structure_Prediction_Guide.html">Back to Main Navigation</a></p>
+    
+    <h2>Check GPU Usage</h2>
+    <p>Before running Chai-1, ensure that your GPUs are available and not in use. Run the following command to monitor GPU activity:</p>
+    <div class="code-block">
+        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+        <pre><code>watch nvidia-smi</code></pre>
+    </div>
+    
+    <h2>Activate the Chai-1 Environment</h2>
+    <p>Before running a prediction, activate the Conda environment for Chai-1:</p>
+    <div class="code-block">
+        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+        <pre><code>conda activate CHAI1_2025</code></pre>
+    </div>
+    
+    <h2>Customise Your Prediction</h2>
+    <p>This section allows you to generate a command-line prompt to run Chai-1 with custom parameters. Adjust the settings below to fit your needs, and then generate a command that can be copied and executed in your terminal.</p>
+    <div class="options">
+        <label><input type="checkbox" id="gpu0"> Use GPU 0</label>
+        <label><input type="checkbox" id="gpu1"> Use GPU 1</label><br><br>
+        <label>Input Directory: <input type="text" id="input_dir" value="/home/joe/Structure_Prediction/Inputs/Chai_Inputs/YOUR_FOLDER_NAME_GOES_HERE" style="width: 600px;"></label><br><br>
+        <label>Output Directory: <input type="text" id="out_dir" value="/home/joe/Structure_Prediction/Outputs/Chai_Outputs/YOUR_FOLDER_NAME_GOES_HERE" style="width: 600px;"></label><br><br>
+        <label>Use MSA Server: <input type="checkbox" id="use_msa_server" checked> (Uncheck to use ESM Embeddings)</label><br><br>
+        <label>Number of Trunk Recycles: <input type="number" id="num_trunk_recycles" value="3" min="1"></label><br><br>
+        <label>Number of Diffusion Samples: <input type="number" id="num_diffn_samples" value="5" min="1"></label><br><br>
+        <button onclick="generateCommand()">Generate Command</button>
+    </div>
+    
+    <h3>Generated Command</h3>
+    <div class="code-block">
+        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+        <pre><code id="generated_command"></code></pre>
+    </div>
+</body>
+</html>
