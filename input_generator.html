@@ -114,12 +114,13 @@
         function handleModelChange() {
             const model = document.getElementById('model').value;
             const af3options = document.getElementById('af3options');
-            if (model === 'alphafold3') {
-                af3options.classList.remove('hidden');
-            } else {
-                af3options.classList.add('hidden');
-            }
+            af3options.style.display = model === 'alphafold3' ? 'block' : 'none';
         }
+
+        // Call handleModelChange on page load to set initial state
+        document.addEventListener('DOMContentLoaded', function() {
+            handleModelChange();
+        });
 
         function generateRandomSeeds(count) {
             const seeds = [];
