@@ -1,144 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <title>Sequence Generator for Biomolecular Models</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sequence Generator for Biomolecular Models</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1000px;
-            margin: auto;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        .input-group {
-            margin-bottom: 20px;
-            padding: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 5px;
-            background-color: #f8f9fa;
-        }
-        textarea {
-            width: 100%;
-            height: 80px;
-            margin-top: 5px;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-family: monospace;
-        }
-        input, select {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 5px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .output {
-            background-color: #f6f8fa;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            white-space: pre-wrap;
-            font-family: monospace;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .button-group {
-            margin: 20px 0;
-            display: flex;
-            gap: 10px;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .model-specific {
-            margin-top: 10px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background-color: white;
-        }
-        .hidden {
-            display: none;
-        }
-        label {
-            font-weight: bold;
-        }
-        .error {
-            color: #dc3545;
-            margin-top: 5px;
-            font-size: 0.9em;
-        }
-    </style>
+    <link rel="stylesheet" href="./assets/css/main.css">
+    <script src="./assets/js/utils.js"></script>
 </head>
 <body>
-    <h1>Sequence Generator for Biomolecular Models</h1>
-    <p>Enter up to four protein sequences and their names, then select the model to generate formatted output.</p>
-
-    <div class="input-group">
-        <label for="name1">Protein Name 1</label>
-        <input type="text" id="name1" placeholder="Enter protein name" />
-        <label for="seq1">Sequence 1</label>
-        <textarea id="seq1" placeholder="Enter protein sequence"></textarea>
-    </div>
-
-    <div class="input-group">
-        <label for="name2">Protein Name 2 (optional)</label>
-        <input type="text" id="name2" placeholder="Enter protein name" />
-        <label for="seq2">Sequence 2</label>
-        <textarea id="seq2" placeholder="Enter protein sequence"></textarea>
-    </div>
-
-    <div class="input-group">
-        <label for="name3">Protein Name 3 (optional)</label>
-        <input type="text" id="name3" placeholder="Enter protein name" />
-        <label for="seq3">Sequence 3</label>
-        <textarea id="seq3" placeholder="Enter protein sequence"></textarea>
-    </div>
-
-    <div class="input-group">
-        <label for="name4">Protein Name 4 (optional)</label>
-        <input type="text" id="name4" placeholder="Enter protein name" />
-        <label for="seq4">Sequence 4</label>
-        <textarea id="seq4" placeholder="Enter protein sequence"></textarea>
-    </div>
-
-    <div class="model-selection">
-        <label for="model">Select Model:</label>
-        <select id="model" onchange="handleModelChange()">
-            <option value="boltz">Boltz-1</option>
-            <option value="chai">Chai-1</option>
-            <option value="colabfold">ColabFold</option>
-            <option value="esmfold">ESMFold</option>
-            <option value="alphafold3">AlphaFold3</option>
-        </select>
-
-        <div id="af3options" class="model-specific hidden">
-            <label for="numPredictions">Number of Predictions:</label>
-            <input type="number" id="numPredictions" min="1" max="10" value="1" />
-            <small>Each prediction will use a different random seed (1-10000)</small>
+    <header class="nav-header">
+        <div class="container">
+            <nav class="nav-links">
+                <a href="./Structure_Prediction_Guide.html">Home</a>
+                <a href="./input_generator.html">Input Generator</a>
+                <a href="./batch_input_generator.html">Batch Generator</a>
+                <a href="./format-converter.html">Format Converter</a>
+            </nav>
         </div>
-    </div>
+    </header>
 
-    <div class="button-group">
-        <button onclick="generateOutput()">Generate Output</button>
-        <button onclick="saveOutput()">Save File</button>
-        <button onclick="copyToClipboard()">Copy to Clipboard</button>
-    </div>
+    <main class="container">
+        <h1>Sequence Generator for Biomolecular Models</h1>
+        <p>Enter up to four protein sequences and their names, then select the model to generate formatted output.</p>
 
-    <h2>Generated Output:</h2>
-    <div class="output" id="output"></div>
+        <div class="card">
+            <h2>Sequence 1 (Required)</h2>
+            <div class="form-group">
+                <label for="name1">Protein Name</label>
+                <input type="text" id="name1" class="input" placeholder="Enter protein name">
+                <label for="seq1">Sequence</label>
+                <textarea id="seq1" class="input" placeholder="Enter protein sequence"></textarea>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Sequence 2 (Optional)</h2>
+            <div class="form-group">
+                <label for="name2">Protein Name</label>
+                <input type="text" id="name2" class="input" placeholder="Enter protein name">
+                <label for="seq2">Sequence</label>
+                <textarea id="seq2" class="input" placeholder="Enter protein sequence"></textarea>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Sequence 3 (Optional)</h2>
+            <div class="form-group">
+                <label for="name3">Protein Name</label>
+                <input type="text" id="name3" class="input" placeholder="Enter protein name">
+                <label for="seq3">Sequence</label>
+                <textarea id="seq3" class="input" placeholder="Enter protein sequence"></textarea>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Sequence 4 (Optional)</h2>
+            <div class="form-group">
+                <label for="name4">Protein Name</label>
+                <input type="text" id="name4" class="input" placeholder="Enter protein name">
+                <label for="seq4">Sequence</label>
+                <textarea id="seq4" class="input" placeholder="Enter protein sequence"></textarea>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Output Configuration</h2>
+            <div class="form-group">
+                <label for="model">Select Model:</label>
+                <select id="model" class="input" onchange="handleModelChange()">
+                    <option value="boltz">Boltz-1</option>
+                    <option value="chai">Chai-1</option>
+                    <option value="colabfold">ColabFold</option>
+                    <option value="esmfold">ESMFold</option>
+                    <option value="alphafold3">AlphaFold3</option>
+                </select>
+            </div>
+
+            <div id="af3options" class="form-group hidden">
+                <label for="numPredictions">Number of Predictions:</label>
+                <input type="number" id="numPredictions" class="input" min="1" max="10" value="1">
+                <small>Each prediction will use a different random seed (1-10000)</small>
+            </div>
+
+            <div class="button-group">
+                <button class="button" onclick="generateOutput()">Generate Output</button>
+                <button class="button" onclick="saveOutput()">Save File</button>
+                <button class="button" onclick="copyToClipboard(document.getElementById('output').textContent)">Copy to Clipboard</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Generated Output:</h2>
+            <div class="code-block">
+                <button class="copy-button" onclick="copyToClipboard(this.nextElementSibling.textContent)">Copy</button>
+                <pre><code id="output"></code></pre>
+            </div>
+        </div>
+    </main>
 
     <script>
         function cleanSequence(input) {

@@ -4,107 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Biomolecular Format Converter</title>
+    <link rel="stylesheet" href="./assets/css/main.css">
+    <script src="./assets/js/utils.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: auto;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        .container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        .input-section, .preview-section {
-            padding: 20px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            background-color: #f8f9fa;
-        }
-        .preview-section {
-            max-height: 600px;
-            overflow-y: auto;
-        }
-        .file-content {
-            font-family: monospace;
-            white-space: pre-wrap;
-            background: #f0f0f0;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 5px;
-            overflow-x: auto;
-        }
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin: 20px 0;
-            flex-wrap: wrap;
-        }
-        button, .file-input-label {
-            padding: 10px 20px;
-            background-color: #4299e1;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            font-size: 14px;
-        }
-        button:hover, .file-input-label:hover {
-            background-color: #2b6cb0;
-        }
-        button:disabled, .file-input-label.disabled {
-            background-color: #a0aec0;
-            cursor: not-allowed;
-        }
-        #fileInput {
-            display: none;
-        }
-        select {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-right: 10px;
-        }
-        .status {
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        .status.success {
-            background-color: #c6f6d5;
-            color: #276749;
-        }
-        .status.error {
-            background-color: #fed7d7;
-            color: #c53030;
-        }
-        .complex-preview {
-            margin-bottom: 20px;
-            padding: 15px;
-            background: white;
-            border-radius: 4px;
-            border: 1px solid #e0e0e0;
-        }
-        .complex-preview h3 {
-            margin-top: 0;
-            color: #2c5282;
-        }
-    </style>
 </head>
 <body>
-    <h1>Biomolecular Format Converter</h1>
-    <p>Convert between different biomolecular sequence formats. Choose input format before selecting files</p>
+    <header class="nav-header">
+        <div class="container">
+            <nav class="nav-links">
+                <a href="./Structure_Prediction_Guide.html">Home</a>
+                <a href="./input_generator.html">Input Generator</a>
+                <a href="./batch_input_generator.html">Batch Generator</a>
+                <a href="./format-converter.html">Format Converter</a>
+            </nav>
+        </div>
+    </header>
 
-    <div class="container">
-        <div class="input-section">
-            <div class="controls">
-                <input type="file" id="fileInput" multiple accept=".fasta,.txt,.json"/>
-                <label for="fileInput" class="file-input-label">Select Files</label>
-                <select id="inputFormat" onchange="handleInputFormatChange()">
+    <main class="container">
+        <h1>Biomolecular Format Converter</h1>
+        <p>Convert between different biomolecular sequence formats. Choose input format before selecting files.</p>
+
+        <div class="card">
+            <h2>Input Selection</h2>
+            <div class="form-group">
+                <input type="file" id="fileInput" multiple accept=".fasta,.txt,.json" class="hidden"/>
+                <label for="fileInput" class="button">Select Files</label>
+                
+                <select id="inputFormat" class="input" onchange="handleInputFormatChange()">
                     <option value="">Select Input Format</option>
                     <option value="boltz">Boltz-1</option>
                     <option value="chai">Chai-1</option>
@@ -112,7 +38,8 @@
                     <option value="esmfold">ESMFold</option>
                     <option value="alphafold3">AlphaFold3</option>
                 </select>
-                <select id="outputFormat" onchange="handleOutputFormatChange()">
+                
+                <select id="outputFormat" class="input" onchange="handleOutputFormatChange()">
                     <option value="">Select Output Format</option>
                     <option value="boltz">Boltz-1</option>
                     <option value="chai">Chai-1</option>
@@ -120,33 +47,48 @@
                     <option value="esmfold">ESMFold</option>
                     <option value="alphafold3">AlphaFold3</option>
                 </select>
-                <button id="previewButton" onclick="updatePreview()" disabled>Update Preview</button>
-                <button id="convertButton" onclick="convertFiles()" disabled>Convert</button>
             </div>
 
-            <div id="formatInfo" class="format-info">
+            <div class="button-group">
+                <button id="previewButton" class="button" onclick="updatePreview()" disabled>Update Preview</button>
+                <button id="convertButton" class="button" onclick="convertFiles()" disabled>Convert</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Format Information</h2>
+            <div id="formatInfo" class="code-block">
                 Select an input format to see format details...
             </div>
+        </div>
 
+        <div id="statusCard" class="card hidden">
+            <h2>Status</h2>
             <div id="status" class="status"></div>
         </div>
 
-        <div class="preview-section">
+        <div class="card">
             <h2>Preview</h2>
-            <div id="preview"></div>
+            <div id="preview" class="preview-section"></div>
         </div>
-    </div>
+    </main>
 
     <script>
         let currentFiles = [];
         let parsedData = [];
 
         const formatInfo = {
-            boltz: "Boltz format: FASTA with chain IDs (>A|protein|)",
-            chai: "Chai format: FASTA with protein names (>protein|name=...)",
-            colabfold: "ColabFold format: Single FASTA with colon-separated sequences",
-            esmfold: "ESMFold format: Similar to ColabFold",
-            alphafold3: "AlphaFold3 format: JSON with protein IDs and sequences"
+            boltz: "Boltz format uses FASTA with chain IDs:\n>A|protein|\nSEQUENCE",
+            chai: "Chai format uses FASTA with protein names:\n>protein|name=ProteinName\nSEQUENCE",
+            colabfold: "ColabFold format uses single FASTA with colon-separated sequences:\n>ComplexName\nSEQ1:SEQ2:SEQ3",
+            esmfold: "ESMFold format is similar to ColabFold:\n>ComplexName\nSEQ1:SEQ2:SEQ3",
+            alphafold3: `AlphaFold3 format uses JSON:\n{
+    "name": "complex_name",
+    "sequences": [
+        {"protein": {"id": "A", "sequence": "SEQ1"}},
+        {"protein": {"id": "B", "sequence": "SEQ2"}}
+    ]
+}`
         };
 
         document.getElementById('fileInput').addEventListener('change', handleFileSelect);

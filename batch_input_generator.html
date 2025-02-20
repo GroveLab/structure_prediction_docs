@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Sequence Generator for Biomolecular Models</title>
+    <link rel="stylesheet" href="./assets/css/main.css">
+    <script src="./assets/js/utils.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+    <header class="nav-header">
+        <div class="container">
+            <nav class="nav-links">
+                <a href="./Structure_Prediction_Guide.html">Home</a>
+                <a href="./input_generator.html">Input Generator</a>
+                <a href="./batch_input_generator.html">Batch Generator</a>
+                <a href="./format-converter.html">Format Converter</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <h1>Batch Sequence Generator</h1>
+        <p>Select multiple FASTA files to process. Files in the same directory will be treated as part of the same complex.</p>
+
+        <div class="card">
+            <h2>Input Selection</h2>
+            <div class="form-group">
+                <input type="file" id="fileInput" multiple accept=".fasta,.txt" webkitdirectory directory/>
+                <label for="fileInput" class="button">Select Directory</label>
+                
+                <select id="model" class="input" onchange="handleModelChange()">
+                    <option value="boltz">Boltz-1</option>
+                    <option value="chai">Chai-1</option>
+                    <option value="colabfold">ColabFold</option>
+                    <option value="esmfold">ESMFold</option>
+                    <option value="alphafold3">AlphaFold3</option>
+                </select>
+                
+                <button id="processButton" class="button" onclick="processAll()" disabled>Process All</button>
+            </div>
+        </div>
+
+        <div id="af3options" class="card hidden">
+            <h2>AlphaFold3 Options</h2>
+            <div class="form-group">
+                <label for="numPredictions">Number of Predictions per Complex:</label>
+                <input type="number" id="numPredictions" class="input" min="1" max="10" value="1">
+                <small>Each prediction will use a different random seed (1-10000)</small>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Directory Structure</h2>
+            <div id="directoryStructure" class="code-block"></div>
+            <div id="status" class="status"></div>
+        </div>
+
+        <div class="card">
+            <h2>Preview</h2>
+            <div id="preview" class="preview-section"></div>
+        </div>
+    </main>
+
+    <script>
+        let complexes = new Map();
+
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+        function handleModelChange() {
+            const model = document.getElementById('model').value;
+            const af3options = document.getElementById('af3options');
+            af3options.classList.toggle('hidden', model !== 'alphafold3');
+            generatePreview();
+        }
+
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            if (files.length === 0) return;
+
+            // Group files by directory
+            complexes.clear();
+            files.forEach(file => {
+                const path = file.webkitRelativePath;
+                const parts = path.split('/');
+                if (parts.length >= 2 && file.name.toLowerCase().endsWith('.fasta')) {
+                    const complexName = parts[1];
+                    if (!complexes.has(complexName)) {
+                        complexes.set(complexName, []);
+                    }
+                    complexes.get(complexName).push(file);
+                }
+            });
+
+            document.getElementById('processButton').disabled = complexes.size === 0;
+            showDirectoryStructure();
+            generatePreview();
+        }
+
+        function showDirectoryStructure() {
+            let structure = 'Directory Structure:\n';
+            for (const [complex, files] of complexes) {
+                structure += `├── ${complex}/\n`;
+                files.forEach((file, index) => {
+                    const prefix = index === files.length - 1 ? '    └── ' : '    ├── ';
+                    structure += prefix + file.name + '\n';
+                });
+            }
+            document.getElementById('directoryStructure').textContent = structure;
+        }
+
+        function cleanSequence(input) {
+            return input.replace(/[^A-Za-z]/g, '').toUpperCase();
+        }
+
+        async function readFastaFile(file) {
+            const text = await file.text();
+            const lines = text.split('\n');
+            let name = '', sequence = '';
+            
+            for (const line of lines) {
+                if (line.startsWith('>')) {
+                    name = line.substring(1).trim();
+                } else {
+                    sequence += line.trim();
+                }
+            }
+            
+            return { name, sequence: cleanSequence(sequence) };
+        }
+
+        function generateRandomSeeds(count) {
+            return Array.from({ length: count }, () => Math.floor(Math.random() * 10000) + 1);
+        }
+
+        function truncateSequence(sequence) {
+            return sequence.length > 10 ? sequence.substring(0, 10) + '...' : sequence;
+        }
+
+        function formatComplex(sequences, model, complexName) {
+            if (model === 'alphafold3') {
+                const numPredictions = parseInt(document.getElementById('numPredictions').value) || 1;
+                const proteinSequences = sequences.map((seq, i) => ({
+                    protein: {
+                        id: String.fromCharCode(65 + i),
+                        sequence: seq.sequence,
+                    }
+                }));
+
+                return JSON.stringify({
+                    name: complexName,
+                    modelSeeds: generateRandomSeeds(numPredictions),
+                    sequences: proteinSequences,
+                    dialect: "alphafold3",
+                    version: 2
+                }, null, 2);
+            } else if (model === 'boltz') {
+                return sequences.map((seq, i) => 
+                    `>${String.fromCharCode(65 + i)}|protein|\n${seq.sequence}`
+                ).join('\n');
+            } else if (model === 'chai') {
+                return sequences.map(seq => 
+                    `>protein|name=${seq.name}\n${seq.sequence}`
+                ).join('\n');
+            } else if (model === 'colabfold' || model === 'esmfold') {
+                return `>${complexName}\n${sequences.map(seq => seq.sequence).join(':')}`;
+            }
+        }
+
+        async function generatePreview() {
+            const model = document.getElementById('model').value;
+            const previewDiv = document.getElementById('preview');
+            previewDiv.innerHTML = '';
+
+            for (const [complexName, files] of complexes) {
+                const sequences = [];
+                for (const file of files) {
+                    const seq = await readFastaFile(file);
+                    sequences.push(seq);
+                }
+
+                const formatted = formatComplex(sequences, model, complexName);
+                const formattedPreview = formatted.replace(/"sequence": "([^"]+)"/g, (match, seq) => 
+                    `"sequence": "${truncateSequence(seq)}"`
+                ).replace(/(?<=[A-Z])[A-Z]+(?=\n|$)/g, seq => 
+                    truncateSequence(seq)
+                );
+
+                const extension = model === 'alphafold3' ? 'json' : 'fasta';
+                const outputFilename = model === 'esmfold' ? 'combined_esmfold.fasta' : `${complexName}_${model}.${extension}`;
+
+                const preview = document.createElement('div');
+                preview.className = 'complex-preview';
+                preview.innerHTML = `
+                    <h3>${complexName}</h3>
+                    <div>Output file: ${outputFilename}</div>
+                    <div class="file-content">${formattedPreview}</div>
+                `;
+                previewDiv.appendChild(preview);
+            }
+        }
+
+        async function processAll() {
+            const model = document.getElementById('model').value;
+            const zip = new JSZip();
+            
+            try {
+                if (model === 'esmfold') {
+                    // For ESMFold, combine all complexes into one file
+                    let combinedContent = [];
+                    for (const [complexName, files] of complexes) {
+                        const sequences = [];
+                        for (const file of files) {
+                            const seq = await readFastaFile(file);
+                            sequences.push(seq);
+                        }
+                        combinedContent.push(formatComplex(sequences, model, complexName));
+                    }
+                    
+                    zip.file('combined_esmfold.fasta', combinedContent.join('\n\n'));
+                } else {
+                    // For other models, create separate files in the zip
+                    for (const [complexName, files] of complexes) {
+                        const sequences = [];
+                        for (const file of files) {
+                            const seq = await readFastaFile(file);
+                            sequences.push(seq);
+                        }
+
+                        const formatted = formatComplex(sequences, model, complexName);
+                        const extension = model === 'alphafold3' ? 'json' : 'fasta';
+                        const fileName = `${complexName}_${model}.${extension}`;
+                        
+                        zip.file(fileName, formatted);
+                    }
+                }
+                
+                // Generate and download the zip file
+                const zipBlob = await zip.generateAsync({type: 'blob'});
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(zipBlob);
+                a.download = `sequences_${model}.zip`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+                
+                showStatus(`Successfully processed ${complexes.size} complexes`, 'success');
+            } catch (err) {
+                showStatus('Error processing files: ' + err.message, 'error');
+            }
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+    </script>
+</body>
+</html>
