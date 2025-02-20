@@ -53,6 +53,11 @@
                 <label for="numPredictions">Number of Predictions per Complex:</label>
                 <input type="number" id="numPredictions" class="input" min="1" max="10" value="1">
                 <small>Each prediction will use a different random seed (1-10000)</small>
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="useTemplates" checked>
+                    <label for="useTemplates">Use Templates</label>
+                </div>
             </div>
         </div>
 
@@ -146,10 +151,13 @@
         function formatComplex(sequences, model, complexName) {
             if (model === 'alphafold3') {
                 const numPredictions = parseInt(document.getElementById('numPredictions').value) || 1;
+                const useTemplates = document.getElementById('useTemplates').checked;
+                
                 const proteinSequences = sequences.map((seq, i) => ({
                     protein: {
                         id: String.fromCharCode(65 + i),
                         sequence: seq.sequence,
+                        templates: useTemplates ? undefined : []  // Only add empty templates array when templates disabled
                     }
                 }));
 
