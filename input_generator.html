@@ -123,15 +123,10 @@
         });
 
         function generateRandomSeeds(count) {
-            const seeds = [];
-            for (let i = 0; i < count; i++) {
-                seeds.push(Math.floor(Math.random() * 10001));
-            }
-            return seeds;
+            return Array.from({ length: count }, () => Math.floor(Math.random() * 4294967296));
         }
 
-        function generateAlphaFold3JSON(sequences, names) {
-            const numPredictions = parseInt(document.getElementById('numPredictions').value) || 1;
+        function generateAlphaFold3JSON(sequences, names, numPredictions) {
             const useTemplates = document.getElementById('useTemplates').checked;
             
             // Filter out empty sequences and create protein objects
@@ -146,7 +141,7 @@
             // Generate the complete JSON structure
             const jsonOutput = {
                 name: names.filter(n => n).join('_') || 'UnnamedComplex',
-                modelSeeds: generateRandomSeeds(numPredictions),
+                modelSeeds: generateRandomSeeds(numPredictions),  // This function now uses full 32-bit range
                 sequences: proteinSequences,
                 dialect: "alphafold3",
                 version: 2

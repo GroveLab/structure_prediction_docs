@@ -141,7 +141,7 @@
         }
 
         function generateRandomSeeds(count) {
-            return Array.from({ length: count }, () => Math.floor(Math.random() * 10000) + 1);
+            return Array.from({ length: count }, () => Math.floor(Math.random() * 4294967296));
         }
 
         function truncateSequence(sequence) {
