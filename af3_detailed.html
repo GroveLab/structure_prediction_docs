@@ -99,11 +99,11 @@
             let gpu1 = document.getElementById("gpu1").checked;
             let gpuFlag = "--gpus all";
             if (gpu0 && gpu1) {
-                gpuFlag = '--gpus "device=0,1"';
+                gpuFlag = '--gpus "device=0,2"';
             } else if (gpu0) {
                 gpuFlag = '--gpus "device=0"';
             } else if (gpu1) {
-                gpuFlag = '--gpus "device=1"';
+                gpuFlag = '--gpus "device=2"';
             }
             
             let inputDir = document.getElementById("input_dir").value;
