@@ -51,6 +51,7 @@
                 <label>Use Templates: <input type="checkbox" id="use_templates"></label><br><br>
                 <label>Number of Recycles: <input type="number" id="num_recycle" value="3" min="1" class="input"></label><br><br>
                 <label>Number of Models: <input type="number" id="num_models" value="5" min="1" class="input"></label><br><br>
+                <label>Number of Seeds: <input type="number" id="num_seeds" value="1" min="1" class="input"></label><br><br>
                 <label>Use Amber Relaxation: <input type="checkbox" id="use_amber"> (Speeds up with GPU)</label><br><br>
                 <button onclick="generateCommand()">Generate Command</button>
             </div>
@@ -76,10 +77,12 @@
             let useTemplates = document.getElementById("use_templates").checked ? "--templates" : "";
             let numRecycle = `--num-recycle ${document.getElementById("num_recycle").value}`;
             let numModels = `--num-models ${document.getElementById("num_models").value}`;
+            let randomSeed = `--random-seed ${document.getElementById("random_seed").value}`;
+            let numSeeds = `--num-seeds ${document.getElementById("num_seeds").value}`;
             let useAmber = document.getElementById("use_amber").checked ? "--amber --use-gpu-relax" : "";
             
             // Filter out empty options and join with actual line continuations
-            let options = [useTemplates, numRecycle, numModels, useAmber]
+            let options = [useTemplates, numRecycle, numModels, randomSeed, numSeeds, useAmber]
                 .filter(option => option !== "")
                 .join(" \\\n    ");
             
