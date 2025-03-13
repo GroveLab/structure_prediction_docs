@@ -77,12 +77,11 @@
             let useTemplates = document.getElementById("use_templates").checked ? "--templates" : "";
             let numRecycle = `--num-recycle ${document.getElementById("num_recycle").value}`;
             let numModels = `--num-models ${document.getElementById("num_models").value}`;
-            let randomSeed = `--random-seed ${document.getElementById("random_seed").value}`;
             let numSeeds = `--num-seeds ${document.getElementById("num_seeds").value}`;
             let useAmber = document.getElementById("use_amber").checked ? "--amber --use-gpu-relax" : "";
             
             // Filter out empty options and join with actual line continuations
-            let options = [useTemplates, numRecycle, numModels, randomSeed, numSeeds, useAmber]
+            let options = [useTemplates, numRecycle, numModels, numSeeds, useAmber]
                 .filter(option => option !== "")
                 .join(" \\\n    ");
             
