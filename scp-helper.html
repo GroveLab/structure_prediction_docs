@@ -1,136 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <title>SCP Command Generator - Structure Prediction</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCP Command Generator - Structure Prediction</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            color: #333;
-        }
-        h1, h2, h3 {
-            color: #2c3e50;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-        }
-        select, input, textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-family: inherit;
-            font-size: 14px;
-        }
-        button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        button:hover {
-            background-color: #2980b9;
-        }
-        .command-output {
-            background-color: #f8f8f8;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 10px;
-            margin-top: 20px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-        .copy-btn {
-            background-color: #27ae60;
-            margin-left: 10px;
-        }
-        .copy-btn:hover {
-            background-color: #219653;
-        }
-        .target-path {
-            font-weight: bold;
-            color: #3498db;
-        }
-    </style>
+    <link rel="stylesheet" href="./assets/css/main.css">
+    <script src="./assets/js/utils.js"></script>
 </head>
 <body>
-    <h1>SCP Command Generator for Structure Prediction</h1>
-    
-    <div class="form-group">
-        <label for="direction">Direction:</label>
-        <select id="direction">
-            <option value="to">To Remote Server (Local → Remote)</option>
-            <option value="from" selected>From Remote Server (Remote → Local)</option>
-        </select>
-    </div>
+    <header class="nav-header">
+        <div class="container">
+            <nav class="nav-links">
+                <a href="./Structure_Prediction_Guide.html">Home</a>
+                <a href="./input_generator.html">Input Generator</a>
+                <a href="./batch_input_generator.html">Batch Generator</a>
+                <a href="./format-converter.html">Format Converter</a>
+                <a href="./scp-helper.html">SCP Helper</a>
+            </nav>
+        </div>
+    </header>
 
-    <div class="form-group">
-        <label for="directory">Target Directory:</label>
-        <select id="directory">
-            <optgroup label="Inputs">
-                <option value="Inputs/AF3_Inputs">AF3_Inputs</option>
-                <option value="Inputs/Boltz_Inputs">Boltz_Inputs</option>
-                <option value="Inputs/Chai_Inputs">Chai_Inputs</option>
-                <option value="Inputs/ColabFold_Inputs">ColabFold_Inputs</option>
-                <option value="Inputs/ESMFold_Inputs">ESMFold_Inputs</option>
-            </optgroup>
-            <optgroup label="Outputs">
-                <option value="Outputs/AF3_Outputs" selected>AF3_Outputs</option>
-                <option value="Outputs/Boltz_Outputs">Boltz_Outputs</option>
-                <option value="Outputs/Chai_Outputs">Chai_Outputs</option>
-                <option value="Outputs/ColabFold_Outputs">ColabFold_Outputs</option>
-                <option value="Outputs/ESMFold_Outputs">ESMFold_Outputs</option>
-            </optgroup>
-        </select>
-    </div>
+    <main class="container">
+        <h1>SCP Command Generator for Structure Prediction</h1>
+        
+        <div class="form-group">
+            <label for="direction">Direction:</label>
+            <select id="direction">
+                <option value="to">To Remote Server (Local → Remote)</option>
+                <option value="from" selected>From Remote Server (Remote → Local)</option>
+            </select>
+        </div>
 
-    <div class="form-group" id="remote-subdir-group">
-        <label for="remote-subdir">Remote Subdirectory (required):</label>
-        <input type="text" id="remote-subdir" placeholder="e.g., protein1/ or results/run2/">
-        <small>You must specify a subdirectory to generate a command</small>
-    </div>
+        <div class="form-group">
+            <label for="directory">Target Directory:</label>
+            <select id="directory">
+                <optgroup label="Inputs">
+                    <option value="Inputs/AF3_Inputs">AF3_Inputs</option>
+                    <option value="Inputs/Boltz_Inputs">Boltz_Inputs</option>
+                    <option value="Inputs/Chai_Inputs">Chai_Inputs</option>
+                    <option value="Inputs/ColabFold_Inputs">ColabFold_Inputs</option>
+                    <option value="Inputs/ESMFold_Inputs">ESMFold_Inputs</option>
+                </optgroup>
+                <optgroup label="Outputs">
+                    <option value="Outputs/AF3_Outputs" selected>AF3_Outputs</option>
+                    <option value="Outputs/Boltz_Outputs">Boltz_Outputs</option>
+                    <option value="Outputs/Chai_Outputs">Chai_Outputs</option>
+                    <option value="Outputs/ColabFold_Outputs">ColabFold_Outputs</option>
+                    <option value="Outputs/ESMFold_Outputs">ESMFold_Outputs</option>
+                </optgroup>
+            </select>
+        </div>
 
-    <div class="form-group">
-        <label for="local-path">Local File/Directory Path:</label>
-        <input type="text" id="local-path" value="~/Downloads/" placeholder="e.g., ~/Downloads/myprotein.fasta or ~/Downloads/results/">
-    </div>
-    
-    <div class="form-group">
-        <label for="options">SCP Options:</label>
-        <select id="options" multiple size="4">
-            <option value="-r" selected>-r (Recursive - for directories)</option>
-            <option value="-p">-p (Preserve modification times)</option>
-            <option value="-C">-C (Compress data)</option>
-            <option value="-v">-v (Verbose mode)</option>
-        </select>
-        <small>Hold Ctrl/Cmd to select multiple options</small>
-    </div>
+        <div class="form-group" id="remote-subdir-group">
+            <label for="remote-subdir">Remote Subdirectory (required):</label>
+            <input type="text" id="remote-subdir" placeholder="e.g., protein1/ or results/run2/">
+            <small>You must specify a subdirectory to generate a command</small>
+        </div>
 
-    <button id="generate-btn">Generate Command</button>
+        <div class="form-group">
+            <label for="local-path">Local File/Directory Path:</label>
+            <input type="text" id="local-path" value="~/Downloads/" placeholder="e.g., ~/Downloads/myprotein.fasta or ~/Downloads/results/">
+        </div>
+        
+        <div class="form-group">
+            <label for="options">SCP Options:</label>
+            <select id="options" multiple size="4">
+                <option value="-r" selected>-r (Recursive - for directories)</option>
+                <option value="-p">-p (Preserve modification times)</option>
+                <option value="-C">-C (Compress data)</option>
+                <option value="-v">-v (Verbose mode)</option>
+            </select>
+            <small>Hold Ctrl/Cmd to select multiple options</small>
+        </div>
 
-    <div class="command-output" id="command-output">
-        Commands will appear here
-    </div>
+        <button id="generate-btn" class="button">Generate Command</button>
 
-    <button id="copy-btn" class="copy-btn">Copy to Clipboard</button>
+        <div class="command-output" id="command-output">
+            Commands will appear here
+        </div>
 
-    <h3>Current Remote Directory Structure:</h3>
-    <pre>
+        <button id="copy-btn" class="button">Copy to Clipboard</button>
+
+        <div class="card">
+            <h3>Current Remote Directory Structure:</h3>
+            <pre>
 ~/Structure_Prediction
 ├── Inputs
 │   ├── AF3_Inputs
@@ -144,7 +97,9 @@
     ├── Chai_Outputs
     ├── ColabFold_Outputs
     └── ESMFold_Outputs
-    </pre>
+            </pre>
+        </div>
+    </main>
 
     <script>
         document.getElementById('generate-btn').addEventListener('click', generateCommand);
@@ -254,5 +209,44 @@
             alert('Command copied to clipboard!');
         }
     </script>
+    
+    <style>
+        /* Additional styles that might not be in main.css */
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        select, input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        
+        .command-output {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 20px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .target-path {
+            font-weight: bold;
+            color: #3498db;
+        }
+    </style>
 </body>
 </html>
