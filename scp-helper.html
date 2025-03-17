@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCP Command Generator - Structure Prediction</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        select, input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .command-output {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .copy-btn {
+            background-color: #27ae60;
+            margin-left: 10px;
+        }
+        .copy-btn:hover {
+            background-color: #219653;
+        }
+        .target-path {
+            font-weight: bold;
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <h1>SCP Command Generator for Structure Prediction</h1>
+    
+    <div class="form-group">
+        <label for="direction">Direction:</label>
+        <select id="direction">
+            <option value="to">To Remote Server (Local → Remote)</option>
+            <option value="from" selected>From Remote Server (Remote → Local)</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="directory">Target Directory:</label>
+        <select id="directory">
+            <optgroup label="Inputs">
+                <option value="Inputs/AF3_Inputs">AF3_Inputs</option>
+                <option value="Inputs/Boltz_Inputs">Boltz_Inputs</option>
+                <option value="Inputs/Chai_Inputs">Chai_Inputs</option>
+                <option value="Inputs/ColabFold_Inputs">ColabFold_Inputs</option>
+                <option value="Inputs/ESMFold_Inputs">ESMFold_Inputs</option>
+            </optgroup>
+            <optgroup label="Outputs">
+                <option value="Outputs/AF3_Outputs" selected>AF3_Outputs</option>
+                <option value="Outputs/Boltz_Outputs">Boltz_Outputs</option>
+                <option value="Outputs/Chai_Outputs">Chai_Outputs</option>
+                <option value="Outputs/ColabFold_Outputs">ColabFold_Outputs</option>
+                <option value="Outputs/ESMFold_Outputs">ESMFold_Outputs</option>
+            </optgroup>
+        </select>
+    </div>
+
+    <div class="form-group" id="remote-subdir-group">
+        <label for="remote-subdir">Remote Subdirectory (required):</label>
+        <input type="text" id="remote-subdir" placeholder="e.g., protein1/ or results/run2/">
+        <small>You must specify a subdirectory to generate a command</small>
+    </div>
+
+    <div class="form-group">
+        <label for="local-path">Local File/Directory Path:</label>
+        <input type="text" id="local-path" value="~/Downloads/" placeholder="e.g., ~/Downloads/myprotein.fasta or ~/Downloads/results/">
+    </div>
+    
+    <div class="form-group">
+        <label for="options">SCP Options:</label>
+        <select id="options" multiple size="4">
+            <option value="-r" selected>-r (Recursive - for directories)</option>
+            <option value="-p">-p (Preserve modification times)</option>
+            <option value="-C">-C (Compress data)</option>
+            <option value="-v">-v (Verbose mode)</option>
+        </select>
+        <small>Hold Ctrl/Cmd to select multiple options</small>
+    </div>
+
+    <button id="generate-btn">Generate Command</button>
+
+    <div class="command-output" id="command-output">
+        Commands will appear here
+    </div>
+
+    <button id="copy-btn" class="copy-btn">Copy to Clipboard</button>
+
+    <h3>Current Remote Directory Structure:</h3>
+    <pre>
+~/Structure_Prediction
+├── Inputs
+│   ├── AF3_Inputs
+│   ├── Boltz_Inputs
+│   ├── Chai_Inputs
+│   ├── ColabFold_Inputs
+│   └── ESMFold_Inputs
+└── Outputs
+    ├── AF3_Outputs
+    ├── Boltz_Outputs
+    ├── Chai_Outputs
+    ├── ColabFold_Outputs
+    └── ESMFold_Outputs
+    </pre>
+
+    <script>
+        document.getElementById('generate-btn').addEventListener('click', generateCommand);
+        document.getElementById('copy-btn').addEventListener('click', copyToClipboard);
+        document.getElementById('direction').addEventListener('change', toggleRemoteSubdirVisibility);
+        
+        // Set initial visibility of the remote subdirectory field based on direction
+        function toggleRemoteSubdirVisibility() {
+            const direction = document.getElementById('direction').value;
+            const remoteSubdirGroup = document.getElementById('remote-subdir-group');
+            remoteSubdirGroup.style.display = direction === 'from' ? 'block' : 'none';
+        }
+        
+        // Set initial visibility on page load
+        toggleRemoteSubdirVisibility();
+
+        function generateCommand() {
+            const direction = document.getElementById('direction').value;
+            const directory = document.getElementById('directory').value;
+            let localPath = document.getElementById('local-path').value.trim();
+            const remoteSubdir = document.getElementById('remote-subdir').value.trim();
+            
+            // If localPath is empty, default to Downloads folder
+            if (!localPath) {
+                localPath = '~/Downloads/';
+                document.getElementById('local-path').value = localPath;
+            }
+            
+            // Check if subdirectory is provided
+            if (!remoteSubdir || remoteSubdir === '') {
+                document.getElementById('command-output').innerHTML = 'Please specify a remote subdirectory to generate a command.';
+                return;
+            }
+            
+            // Get selected options
+            const options = Array.from(document.getElementById('options').selectedOptions)
+                .map(option => option.value)
+                .join(' ');
+            
+            let command = '';
+            let remoteServerPath = `joe@130.209.225.148:~/Structure_Prediction/${directory}`;
+            
+            // Add subdirectory to remote path
+            // Ensure the subdirectory path has proper format
+            const formattedSubdir = remoteSubdir.endsWith('/') ? remoteSubdir : `${remoteSubdir}/`;
+            remoteServerPath = `${remoteServerPath}/${formattedSubdir}`;
+            
+            if (direction === 'to') {
+                // Local to Remote
+                if (localPath.endsWith('/')) {
+                    // If path ends with slash, we're copying contents of a directory
+                    command = `scp ${options} ${localPath}* ${remoteServerPath}`;
+                } else {
+                    command = `scp ${options} ${localPath} ${remoteServerPath}`;
+                }
+            } else {
+                // Remote to Local
+                // Make sure localPath exists
+                const localDest = localPath || './';
+                
+                // For remote to local, handle the path based on whether a subdirectory is specified
+                if (remoteSubdir && remoteSubdir !== '') {
+                    // Targeting a specific subdirectory
+                    if (localDest.endsWith('/')) {
+                        command = `scp ${options} ${remoteServerPath}* ${localDest}`;
+                    } else {
+                        command = `scp ${options} ${remoteServerPath}* ${localDest}/`;
+                    }
+                } else {
+                    // Targeting the entire directory
+                    if (localDest.endsWith('/')) {
+                        command = `scp ${options} ${remoteServerPath}/* ${localDest}`;
+                    } else {
+                        command = `scp ${options} ${remoteServerPath}/* ${localDest}/`;
+                    }
+                }
+            }
+            
+            // Add explanation
+            let explanation = '';
+            // Using the remoteSubdir variable already declared above
+            let pathDisplay = `~/Structure_Prediction/${directory}/`;
+            
+            if (remoteSubdir && remoteSubdir !== '') {
+                const formattedSubdir = remoteSubdir.endsWith('/') ? remoteSubdir : `${remoteSubdir}/`;
+                pathDisplay = `~/Structure_Prediction/${directory}/${formattedSubdir}`;
+            }
+            
+            if (direction === 'to') {
+                explanation = `\n\n# This command copies from your local machine to the remote server\n# Destination: <span class="target-path">${pathDisplay}</span>`;
+            } else {
+                explanation = `\n\n# This command copies from the remote server to your local machine\n# Source: <span class="target-path">${pathDisplay}</span>`;
+            }
+            
+            document.getElementById('command-output').innerHTML = `${command}${explanation}`;
+        }
+
+        function copyToClipboard() {
+            const commandText = document.getElementById('command-output').innerText;
+            const textArea = document.createElement('textarea');
+            textArea.value = commandText.split('\n\n')[0]; // Just copy the command, not the explanation
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            alert('Command copied to clipboard!');
+        }
+    </script>
+</body>
+</html>
