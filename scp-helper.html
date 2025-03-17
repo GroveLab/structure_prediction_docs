@@ -151,7 +151,7 @@
                 // Local to Remote
                 if (localPath.endsWith('/')) {
                     // If path ends with slash, we're copying contents of a directory
-                    command = `scp ${options} ${localPath}* ${remoteServerPath}`;
+                    command = `scp ${options} ${localPath} ${remoteServerPath}`;
                 } else {
                     command = `scp ${options} ${localPath} ${remoteServerPath}`;
                 }
@@ -164,16 +164,16 @@
                 if (remoteSubdir && remoteSubdir !== '') {
                     // Targeting a specific subdirectory
                     if (localDest.endsWith('/')) {
-                        command = `scp ${options} ${remoteServerPath}* ${localDest}`;
+                        command = `scp ${options} ${remoteServerPath} ${localDest}`;
                     } else {
-                        command = `scp ${options} ${remoteServerPath}* ${localDest}/`;
+                        command = `scp ${options} ${remoteServerPath} ${localDest}/`;
                     }
                 } else {
                     // Targeting the entire directory
                     if (localDest.endsWith('/')) {
-                        command = `scp ${options} ${remoteServerPath}/* ${localDest}`;
+                        command = `scp ${options} ${remoteServerPath}/ ${localDest}`;
                     } else {
-                        command = `scp ${options} ${remoteServerPath}/* ${localDest}/`;
+                        command = `scp ${options} ${remoteServerPath}/ ${localDest}/`;
                     }
                 }
             }
