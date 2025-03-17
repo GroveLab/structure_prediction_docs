@@ -140,7 +140,7 @@
                 .join(' ');
             
             let command = '';
-            let remoteServerPath = `joe@130.209.225.148:~/Structure_Prediction/${directory}`;
+            let remoteServerPath = `joe@130.209.225.148:Structure_Prediction/${directory}`;
             
             // Add subdirectory to remote path
             // Ensure the subdirectory path has proper format
@@ -181,11 +181,11 @@
             // Add explanation
             let explanation = '';
             // Using the remoteSubdir variable already declared above
-            let pathDisplay = `~/Structure_Prediction/${directory}/`;
+            let pathDisplay = `Structure_Prediction/${directory}/`;
             
             if (remoteSubdir && remoteSubdir !== '') {
                 const formattedSubdir = remoteSubdir.endsWith('/') ? remoteSubdir : `${remoteSubdir}/`;
-                pathDisplay = `~/Structure_Prediction/${directory}/${formattedSubdir}`;
+                pathDisplay = `Structure_Prediction/${directory}/${formattedSubdir}`;
             }
             
             if (direction === 'to') {
