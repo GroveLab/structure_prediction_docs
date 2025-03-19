@@ -52,9 +52,9 @@
         </div>
 
         <div class="form-group" id="remote-subdir-group">
-            <label for="remote-subdir">Remote Subdirectory (required):</label>
+            <label for="remote-subdir">Remote Subdirectory:</label>
             <input type="text" id="remote-subdir" placeholder="e.g., protein1/ or results/run2/">
-            <small>You must specify a subdirectory to generate a command</small>
+            <small id="subdir-hint">You must specify a subdirectory when copying from remote server</small>
         </div>
 
         <div class="form-group">
@@ -110,7 +110,15 @@
         function toggleRemoteSubdirVisibility() {
             const direction = document.getElementById('direction').value;
             const remoteSubdirGroup = document.getElementById('remote-subdir-group');
-            remoteSubdirGroup.style.display = direction === 'from' ? 'block' : 'none';
+            const subdirHint = document.getElementById('subdir-hint');
+            
+            if (direction === 'from') {
+                remoteSubdirGroup.style.display = 'block';
+                subdirHint.textContent = 'You must specify a subdirectory when copying from remote server';
+            } else {
+                remoteSubdirGroup.style.display = 'block';
+                subdirHint.textContent = 'Optional - leave empty to copy to main directory';
+            }
         }
         
         // Set initial visibility on page load
@@ -128,9 +136,9 @@
                 document.getElementById('local-path').value = localPath;
             }
             
-            // Check if subdirectory is provided
-            if (!remoteSubdir || remoteSubdir === '') {
-                document.getElementById('command-output').innerHTML = 'Please specify a remote subdirectory to generate a command.';
+            // Only require subdirectory for 'from' direction
+            if (direction === 'from' && (!remoteSubdir || remoteSubdir === '')) {
+                document.getElementById('command-output').innerHTML = 'Please specify a remote subdirectory when copying from the remote server.';
                 return;
             }
             
@@ -142,10 +150,11 @@
             let command = '';
             let remoteServerPath = `joe@130.209.225.148:Structure_Prediction/${directory}`;
             
-            // Add subdirectory to remote path
-            // Ensure the subdirectory path has proper format
-            const formattedSubdir = remoteSubdir.endsWith('/') ? remoteSubdir : `${remoteSubdir}/`;
-            remoteServerPath = `${remoteServerPath}/${formattedSubdir}`;
+            // Add subdirectory to remote path if specified
+            if (remoteSubdir) {
+                const formattedSubdir = remoteSubdir.endsWith('/') ? remoteSubdir : `${remoteSubdir}/`;
+                remoteServerPath = `${remoteServerPath}/${formattedSubdir}`;
+            }
             
             if (direction === 'to') {
                 // Local to Remote
