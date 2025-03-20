@@ -36,11 +36,11 @@
                 <label for="fileInput" class="button">Select Directory</label>
                 
                 <select id="model" class="input" onchange="handleModelChange()">
+                    <option value="alphafold3">AlphaFold3</option>
                     <option value="boltz">Boltz-1</option>
                     <option value="chai">Chai-1</option>
                     <option value="colabfold">ColabFold</option>
                     <option value="esmfold">ESMFold</option>
-                    <option value="alphafold3">AlphaFold3</option>
                 </select>
                 
                 <button id="processButton" class="button" onclick="processAll()" disabled>Process All</button>
@@ -214,18 +214,20 @@
                     const seq = await readFastaFile(file);
                     sequences.push(seq);
                 }
-                const formatted = formatComplex(sequences, model, complexName);
+                // Remove file extension from complex name
+                const cleanComplexName = complexName.replace(/\.[^/.]+$/, '');
+                const formatted = formatComplex(sequences, model, cleanComplexName);
                 const formattedPreview = formatted.replace(/"sequence": "([^"]+)"/g, (match, seq) => 
                     `"sequence": "${truncateSequence(seq)}"`
                 ).replace(/(?<=[A-Z])[A-Z]+(?=\n|$)/g, seq => 
                     truncateSequence(seq)
                 );
                 const extension = model === 'alphafold3' ? 'json' : 'fasta';
-                const outputFilename = model === 'esmfold' ? 'combined_esmfold.fasta' : `${complexName}_${model}.${extension}`;
+                const outputFilename = model === 'esmfold' ? 'combined_esmfold.fasta' : `${cleanComplexName}_${model}.${extension}`;
                 const preview = document.createElement('div');
                 preview.className = 'complex-preview';
                 preview.innerHTML = `
-                    <h3>${complexName}</h3>
+                    <h3>${cleanComplexName}</h3>
                     <div>Output file: ${outputFilename}</div>
                     <div class="file-content">${formattedPreview}</div>
                 `;
@@ -246,11 +248,13 @@
                             const seq = await readFastaFile(file);
                             sequences.push(seq);
                         }
-                        combinedContent.push(formatComplex(sequences, model, complexName));
+                        const cleanComplexName = complexName.replace(/\.[^/.]+$/, '');
+                        combinedContent.push(formatComplex(sequences, model, cleanComplexName));
                     }
                     zip.file('combined_esmfold.fasta', combinedContent.join('\n\n'));
                 } else if (model === 'boltz' || model === 'chai') {
-                    const numRuns = parseInt(document.getElementById(`${model}Runs`).value) || 1;
+                    const runsElementId = model === 'boltz' ? 'numRuns' : 'chaiRuns';
+                    const numRuns = parseInt(document.getElementById(runsElementId).value) || 1;
                     
                     for (const [complexName, files] of complexes) {
                         const sequences = [];
@@ -259,16 +263,17 @@
                             sequences.push(seq);
                         }
                         
-                        const formatted = formatComplex(sequences, model, complexName);
+                        const cleanComplexName = complexName.replace(/\.[^/.]+$/, '');
+                        const formatted = formatComplex(sequences, model, cleanComplexName);
                         
                         if (numRuns > 1) {
                             for (let i = 1; i <= numRuns; i++) {
                                 const runNumber = String(i).padStart(3, '0');
-                                const fileName = `${complexName}/run_${runNumber}.fasta`;
+                                const fileName = `${cleanComplexName}_${model}_run${runNumber}.fasta`;
                                 zip.file(fileName, formatted);
                             }
                         } else {
-                            zip.file(`${complexName}_${model}.fasta`, formatted);
+                            zip.file(`${cleanComplexName}_${model}.fasta`, formatted);
                         }
                     }
                 } else {
@@ -279,9 +284,10 @@
                             const seq = await readFastaFile(file);
                             sequences.push(seq);
                         }
-                        const formatted = formatComplex(sequences, model, complexName);
+                        const cleanComplexName = complexName.replace(/\.[^/.]+$/, '');
+                        const formatted = formatComplex(sequences, model, cleanComplexName);
                         const extension = model === 'alphafold3' ? 'json' : 'fasta';
-                        const fileName = `${complexName}_${model}.${extension}`;
+                        const fileName = `${cleanComplexName}_${model}.${extension}`;
                         zip.file(fileName, formatted);
                     }
                 }
@@ -289,7 +295,7 @@
                 const zipBlob = await zip.generateAsync({type: 'blob'});
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(zipBlob);
-                a.download = `sequences_${model}.zip`;
+                a.download = `${model}_prediction_inputs.zip`;
                 a.click();
                 URL.revokeObjectURL(a.href);
                 
@@ -304,6 +310,10 @@
             status.textContent = message;
             status.className = `status ${type}`;
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            handleModelChange();
+        });
     </script>
 </body>
 </html>
