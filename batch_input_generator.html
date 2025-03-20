@@ -61,6 +61,24 @@
             </div>
         </div>
 
+        <div id="boltzoptions" class="card hidden">
+            <h2>Boltz Options</h2>
+            <div class="form-group">
+                <label for="numRuns">Number of Runs:</label>
+                <input type="number" id="numRuns" class="input" min="1" max="100" value="1">
+                <small>Each run will use a different random seed</small>
+            </div>
+        </div>
+
+        <div id="chaioptions" class="card hidden">
+            <h2>Chai Options</h2>
+            <div class="form-group">
+                <label for="chaiRuns">Number of Runs:</label>
+                <input type="number" id="chaiRuns" class="input" min="1" max="100" value="1">
+                <small>Each run will use a different random seed</small>
+            </div>
+        </div>
+
         <div class="card">
             <h2>Directory Structure</h2>
             <div id="directoryStructure" class="code-block"></div>
@@ -81,7 +99,13 @@
         function handleModelChange() {
             const model = document.getElementById('model').value;
             const af3options = document.getElementById('af3options');
+            const boltzoptions = document.getElementById('boltzoptions');
+            const chaioptions = document.getElementById('chaioptions');
+            
             af3options.classList.toggle('hidden', model !== 'alphafold3');
+            boltzoptions.classList.toggle('hidden', model !== 'boltz');
+            chaioptions.classList.toggle('hidden', model !== 'chai');
+            
             generatePreview();
         }
 
@@ -136,7 +160,6 @@
                     sequence += line.trim();
                 }
             }
-            
             return { name, sequence: cleanSequence(sequence) };
         }
 
@@ -157,7 +180,7 @@
                     protein: {
                         id: String.fromCharCode(65 + i),
                         sequence: seq.sequence,
-                        templates: useTemplates ? undefined : []  // Only add empty templates array when templates disabled
+                        templates: useTemplates ? undefined : []
                     }
                 }));
 
@@ -185,24 +208,20 @@
             const model = document.getElementById('model').value;
             const previewDiv = document.getElementById('preview');
             previewDiv.innerHTML = '';
-
             for (const [complexName, files] of complexes) {
                 const sequences = [];
                 for (const file of files) {
                     const seq = await readFastaFile(file);
                     sequences.push(seq);
                 }
-
                 const formatted = formatComplex(sequences, model, complexName);
                 const formattedPreview = formatted.replace(/"sequence": "([^"]+)"/g, (match, seq) => 
                     `"sequence": "${truncateSequence(seq)}"`
                 ).replace(/(?<=[A-Z])[A-Z]+(?=\n|$)/g, seq => 
                     truncateSequence(seq)
                 );
-
                 const extension = model === 'alphafold3' ? 'json' : 'fasta';
                 const outputFilename = model === 'esmfold' ? 'combined_esmfold.fasta' : `${complexName}_${model}.${extension}`;
-
                 const preview = document.createElement('div');
                 preview.className = 'complex-preview';
                 preview.innerHTML = `
@@ -220,7 +239,6 @@
             
             try {
                 if (model === 'esmfold') {
-                    // For ESMFold, combine all complexes into one file
                     let combinedContent = [];
                     for (const [complexName, files] of complexes) {
                         const sequences = [];
@@ -230,26 +248,44 @@
                         }
                         combinedContent.push(formatComplex(sequences, model, complexName));
                     }
-                    
                     zip.file('combined_esmfold.fasta', combinedContent.join('\n\n'));
-                } else {
-                    // For other models, create separate files in the zip
+                } else if (model === 'boltz' || model === 'chai') {
+                    const numRuns = parseInt(document.getElementById(`${model}Runs`).value) || 1;
+                    
                     for (const [complexName, files] of complexes) {
                         const sequences = [];
                         for (const file of files) {
                             const seq = await readFastaFile(file);
                             sequences.push(seq);
                         }
-
+                        
+                        const formatted = formatComplex(sequences, model, complexName);
+                        
+                        if (numRuns > 1) {
+                            for (let i = 1; i <= numRuns; i++) {
+                                const runNumber = String(i).padStart(3, '0');
+                                const fileName = `${complexName}/run_${runNumber}.fasta`;
+                                zip.file(fileName, formatted);
+                            }
+                        } else {
+                            zip.file(`${complexName}_${model}.fasta`, formatted);
+                        }
+                    }
+                } else {
+                    // Handle other models (AlphaFold3, etc.)
+                    for (const [complexName, files] of complexes) {
+                        const sequences = [];
+                        for (const file of files) {
+                            const seq = await readFastaFile(file);
+                            sequences.push(seq);
+                        }
                         const formatted = formatComplex(sequences, model, complexName);
                         const extension = model === 'alphafold3' ? 'json' : 'fasta';
                         const fileName = `${complexName}_${model}.${extension}`;
-                        
                         zip.file(fileName, formatted);
                     }
                 }
-                
-                // Generate and download the zip file
+
                 const zipBlob = await zip.generateAsync({type: 'blob'});
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(zipBlob);
