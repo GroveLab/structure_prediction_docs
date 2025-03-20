@@ -228,10 +228,10 @@
                 if (numRuns > 1) {
                     const zip = new JSZip();
                     
-                    // Create multiple files with run numbers
+                    // Create multiple files with run numbers and model name
                     for (let i = 1; i <= numRuns; i++) {
                         const runNumber = String(i).padStart(3, '0');
-                        const fileName = `${complexName}_run_${runNumber}.fasta`;
+                        const fileName = `${complexName}_boltz_run_${runNumber}.fasta`;
                         zip.file(fileName, output);
                     }
 
@@ -249,7 +249,7 @@
                     const zip = new JSZip();
                     for (let i = 1; i <= numRuns; i++) {
                         const runNumber = String(i).padStart(3, '0');
-                        const fileName = `${complexName}_run_${runNumber}.fasta`;
+                        const fileName = `${complexName}_chai_run_${runNumber}.fasta`;
                         zip.file(fileName, output);
                     }
                     const blob = await zip.generateAsync({type: "blob"});
