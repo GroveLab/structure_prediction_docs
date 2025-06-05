@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>FASTA Cleaner - Structure Prediction</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./assets/css/main.css">
+    <script src="./assets/js/utils.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <header class="nav-header">
+        <div class="container">
+            <nav class="nav-links" role="navigation" aria-label="Main navigation">
+                <a href="./Structure_Prediction_Guide.html">Home</a>
+                <a href="./input_generator.html">Input Generator</a>
+                <a href="./batch_input_generator.html">Batch Generator</a>
+                <a href="./format-converter.html">Format Converter</a>
+                <a href="./fasta-cleaner.html" aria-current="page">FASTA Cleaner</a>
+                <a href="./scp-helper.html">SCP Helper</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container" id="main-content">
+        <h1>FASTA File Cleaner</h1>
+        <p>Clean FASTA files by standardizing headers and removing problematic characters. Combine multiple files or split multi-FASTA files.</p>
+
+        <fieldset class="card">
+            <legend>Operation Mode</legend>
+            <div class="form-group">
+                <label for="operationMode">Choose Operation:</label>
+                <select id="operationMode" class="input" onchange="handleOperationModeChange()" aria-describedby="operation-help">
+                    <option value="clean">Clean FASTA Files (maintain structure)</option>
+                    <option value="combine">Combine Multiple Files into Multi-FASTA</option>
+                    <option value="split">Split Multi-FASTA into Individual Files</option>
+                </select>
+                <div id="operation-help" class="help-text">Select how you want to process your FASTA files</div>
+            </div>
+        </fieldset>
+
+        <fieldset class="card">
+            <legend>File Input</legend>
+            <div class="form-group">
+                <div class="drop-zone" id="fastaDropZone" role="button" tabindex="0" aria-label="FASTA file drop zone">
+                    <p>Drop FASTA files here to clean and process</p>
+                    <button type="button" class="button" onclick="selectFiles()">Select Files</button>
+                </div>
+                <input type="file" id="fileInput" multiple accept=".fasta,.fa,.txt" style="display: none;"/>
+                <div id="fileStatus" class="drop-status hidden"></div>
+                <div class="help-text">Supports single and multi-FASTA files. Headers will be cleaned and sequences will have whitespace removed.</div>
+            </div>
+        </fieldset>
+
+        <fieldset class="card">
+            <legend>Cleaning Options</legend>
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="replaceSpaces" checked aria-describedby="spaces-help">
+                    <label for="replaceSpaces">Replace spaces with underscores in headers</label>
+                </div>
+                <div id="spaces-help" class="help-text sr-only">Replaces all spaces in FASTA headers with underscores for compatibility</div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="removeProblematic" checked aria-describedby="problematic-help">
+                    <label for="removeProblematic">Replace problematic characters with underscores (|, >, :, *, ?, ", <, \\, /)</label>
+                </div>
+                <div id="problematic-help" class="help-text sr-only">Replaces characters that may cause issues in downstream applications with underscores to preserve structure</div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="removeWhitespace" checked aria-describedby="whitespace-help">
+                    <label for="removeWhitespace">Remove all whitespace from sequences</label>
+                </div>
+                <div id="whitespace-help" class="help-text sr-only">Removes spaces, tabs, and line breaks within sequences</div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="uppercaseSequence" checked aria-describedby="uppercase-help">
+                    <label for="uppercaseSequence">Convert sequences to uppercase</label>
+                </div>
+                <div id="uppercase-help" class="help-text sr-only">Converts all amino acid codes to uppercase letters</div>
+            </div>
+        </fieldset>
+
+        <div class="card">
+            <div class="button-group">
+                <button id="processButton" class="button" onclick="processFiles()" disabled>Process Files</button>
+                <button class="button" onclick="clearFiles()">Clear All</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>File Preview</h2>
+            <div id="preview" class="preview-section" role="region" aria-label="File processing preview" aria-live="polite">
+                <p>Upload files to see preview of cleaned output</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let uploadedFiles = [];
+        let processedSequences = [];
+
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+        
+        // Setup drag and drop
+        const dropZone = document.getElementById('fastaDropZone');
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const files = Array.from(e.dataTransfer.files);
+            handleDroppedFiles(files);
+        });
+
+        dropZone.addEventListener('click', (e) => {
+            if (e.target === dropZone || e.target.tagName === 'P') {
+                selectFiles();
+            }
+        });
+
+        function selectFiles() {
+            document.getElementById('fileInput').click();
+        }
+
+        function handleOperationModeChange() {
+            // Update help text based on mode
+            const mode = document.getElementById('operationMode').value;
+            const helpText = document.querySelector('.help-text');
+            
+            if (mode === 'combine') {
+                helpText.textContent = 'Multiple files will be combined into a single multi-FASTA file with cleaned headers and sequences.';
+            } else if (mode === 'split') {
+                helpText.textContent = 'Multi-FASTA files will be split into individual files, each with cleaned headers and sequences.';
+            } else {
+                helpText.textContent = 'Files will be cleaned while maintaining their original structure (single stays single, multi stays multi).';
+            }
+            
+            generatePreview();
+        }
+
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            handleDroppedFiles(files);
+        }
+
+        async function handleDroppedFiles(files) {
+            const fastaFiles = files.filter(file => 
+                file.name.toLowerCase().endsWith('.fasta') || 
+                file.name.toLowerCase().endsWith('.fa') || 
+                file.name.toLowerCase().endsWith('.txt')
+            );
+            
+            if (fastaFiles.length === 0) {
+                showNotification('Please drop FASTA files (.fasta, .fa, .txt)', 'error');
+                return;
+            }
+
+            uploadedFiles = fastaFiles;
+            updateFileStatus(fastaFiles);
+            
+            try {
+                processedSequences = await parseAllFiles(fastaFiles);
+                document.getElementById('processButton').disabled = processedSequences.length === 0;
+                generatePreview();
+                showNotification(`Loaded ${processedSequences.length} sequence(s) from ${fastaFiles.length} file(s)`, 'success');
+            } catch (error) {
+                showNotification('Error processing files: ' + error.message, 'error');
+            }
+        }
+
+        function updateFileStatus(files) {
+            const statusElement = document.getElementById('fileStatus');
+            const fileList = files.map(file => 
+                `<li class="file-item">📄 ${file.name}</li>`
+            ).join('');
+
+            statusElement.className = 'drop-status';
+            statusElement.innerHTML = `
+                <div class="summary">✅ Loaded ${files.length} file(s) for processing</div>
+                <ul class="file-list">${fileList}</ul>
+            `;
+            statusElement.classList.remove('hidden');
+        }
+
+        async function parseAllFiles(files) {
+            const allSequences = [];
+            for (const file of files) {
+                const sequences = await parseMultiFasta(file);
+                allSequences.push(...sequences);
+            }
+            return allSequences;
+        }
+
+        async function parseMultiFasta(file) {
+            const text = await file.text();
+            const sequences = [];
+            const lines = text.split('\n');
+            let currentHeader = '';
+            let currentSequence = '';
+            
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                if (trimmedLine.startsWith('>')) {
+                    // Save previous sequence if it exists
+                    if (currentHeader && currentSequence) {
+                        sequences.push({
+                            originalFile: file.name,
+                            header: currentHeader,
+                            sequence: currentSequence
+                        });
+                    }
+                    // Start new sequence
+                    currentHeader = trimmedLine.substring(1);
+                    currentSequence = '';
+                } else if (trimmedLine) {
+                    currentSequence += trimmedLine;
+                }
+            }
+            
+            // Save the last sequence
+            if (currentHeader && currentSequence) {
+                sequences.push({
+                    originalFile: file.name,
+                    header: currentHeader,
+                    sequence: currentSequence
+                });
+            }
+            
+            // If no sequences found, try as single sequence without header
+            if (sequences.length === 0 && text.trim()) {
+                const cleanedSeq = text.replace(/[^A-Za-z]/g, '');
+                if (cleanedSeq) {
+                    sequences.push({
+                        originalFile: file.name,
+                        header: file.name.replace(/\.(fasta|fa|txt)$/i, ''),
+                        sequence: cleanedSeq
+                    });
+                }
+            }
+            
+            return sequences;
+        }
+
+        function cleanHeader(header) {
+            let cleaned = header;
+            
+            if (document.getElementById('replaceSpaces').checked) {
+                cleaned = cleaned.replace(/\s+/g, '_');
+            }
+            
+            if (document.getElementById('removeProblematic').checked) {
+                // Replace problematic characters with underscores: | > : * ? " < \ /
+                cleaned = cleaned.replace(/[|>:*?"<\\/]/g, '_');
+            }
+            
+            return cleaned;
+        }
+
+        function cleanSequence(sequence) {
+            let cleaned = sequence;
+            
+            if (document.getElementById('removeWhitespace').checked) {
+                cleaned = cleaned.replace(/\s/g, '');
+            }
+            
+            if (document.getElementById('uppercaseSequence').checked) {
+                cleaned = cleaned.toUpperCase();
+            }
+            
+            return cleaned;
+        }
+
+        function generatePreview() {
+            const previewDiv = document.getElementById('preview');
+            
+            if (processedSequences.length === 0) {
+                previewDiv.innerHTML = '<p>Upload files to see preview of cleaned output</p>';
+                return;
+            }
+
+            const mode = document.getElementById('operationMode').value;
+            let preview = '';
+
+            if (mode === 'combine') {
+                preview = '<h3>Combined Multi-FASTA Output:</h3><pre>';
+                processedSequences.slice(0, 5).forEach(seq => {
+                    const cleanedHeader = cleanHeader(seq.header);
+                    const cleanedSeq = cleanSequence(seq.sequence);
+                    const truncatedSeq = cleanedSeq.length > 50 ? cleanedSeq.substring(0, 50) + '...' : cleanedSeq;
+                    preview += `>${cleanedHeader}\n${truncatedSeq}\n\n`;
+                });
+                preview += '</pre>';
+                if (processedSequences.length > 5) {
+                    preview += `<p>... and ${processedSequences.length - 5} more sequences</p>`;
+                }
+            } else if (mode === 'split') {
+                preview = '<h3>Individual Files Output:</h3>';
+                const groupedByFile = {};
+                processedSequences.forEach(seq => {
+                    if (!groupedByFile[seq.originalFile]) {
+                        groupedByFile[seq.originalFile] = [];
+                    }
+                    groupedByFile[seq.originalFile].push(seq);
+                });
+
+                Object.entries(groupedByFile).slice(0, 3).forEach(([fileName, sequences]) => {
+                    sequences.forEach(seq => {
+                        const cleanedHeader = cleanHeader(seq.header);
+                        const cleanedSeq = cleanSequence(seq.sequence);
+                        const truncatedSeq = cleanedSeq.length > 30 ? cleanedSeq.substring(0, 30) + '...' : cleanedSeq;
+                        preview += `<div><strong>${cleanedHeader}.fasta:</strong><br><pre>>${cleanedHeader}\n${truncatedSeq}</pre></div>`;
+                    });
+                });
+            } else {
+                preview = '<h3>Cleaned Files (maintaining structure):</h3>';
+                processedSequences.slice(0, 3).forEach(seq => {
+                    const cleanedHeader = cleanHeader(seq.header);
+                    const cleanedSeq = cleanSequence(seq.sequence);
+                    const truncatedSeq = cleanedSeq.length > 40 ? cleanedSeq.substring(0, 40) + '...' : cleanedSeq;
+                    preview += `<div><strong>From ${seq.originalFile}:</strong><br><pre>>${cleanedHeader}\n${truncatedSeq}</pre></div>`;
+                });
+            }
+
+            previewDiv.innerHTML = preview;
+        }
+
+        async function processFiles() {
+            if (processedSequences.length === 0) {
+                showNotification('Please upload files first', 'error');
+                return;
+            }
+
+            const mode = document.getElementById('operationMode').value;
+            
+            try {
+                if (mode === 'combine') {
+                    await processCombineMode();
+                } else if (mode === 'split') {
+                    await processSplitMode();
+                } else {
+                    await processCleanMode();
+                }
+            } catch (error) {
+                showNotification('Error processing files: ' + error.message, 'error');
+            }
+        }
+
+        async function processCombineMode() {
+            let combinedContent = '';
+            
+            processedSequences.forEach(seq => {
+                const cleanedHeader = cleanHeader(seq.header);
+                const cleanedSeq = cleanSequence(seq.sequence);
+                combinedContent += `>${cleanedHeader}\n${cleanedSeq}\n\n`;
+            });
+
+            // Single file download
+            const blob = new Blob([combinedContent.trim()], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'combined_cleaned.fasta';
+            a.click();
+            URL.revokeObjectURL(a.href);
+            
+            showNotification('Combined FASTA file downloaded', 'success');
+        }
+
+        async function processSplitMode() {
+            const zip = new JSZip();
+            
+            processedSequences.forEach(seq => {
+                const cleanedHeader = cleanHeader(seq.header);
+                const cleanedSeq = cleanSequence(seq.sequence);
+                const content = `>${cleanedHeader}\n${cleanedSeq}\n`;
+                const fileName = `${cleanedHeader.replace(/[^a-zA-Z0-9_-]/g, '_')}.fasta`;
+                zip.file(fileName, content);
+            });
+
+            const zipBlob = await zip.generateAsync({type: 'blob'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(zipBlob);
+            a.download = 'split_cleaned_sequences.zip';
+            a.click();
+            URL.revokeObjectURL(a.href);
+            
+            showNotification(`${processedSequences.length} individual files downloaded as ZIP`, 'success');
+        }
+
+        async function processCleanMode() {
+            // Group sequences by original file
+            const groupedByFile = {};
+            processedSequences.forEach(seq => {
+                if (!groupedByFile[seq.originalFile]) {
+                    groupedByFile[seq.originalFile] = [];
+                }
+                groupedByFile[seq.originalFile].push(seq);
+            });
+
+            const fileCount = Object.keys(groupedByFile).length;
+            
+            if (fileCount === 1) {
+                // Single file output
+                const fileName = Object.keys(groupedByFile)[0];
+                const sequences = groupedByFile[fileName];
+                let content = '';
+                
+                sequences.forEach(seq => {
+                    const cleanedHeader = cleanHeader(seq.header);
+                    const cleanedSeq = cleanSequence(seq.sequence);
+                    content += `>${cleanedHeader}\n${cleanedSeq}\n\n`;
+                });
+
+                const blob = new Blob([content.trim()], { type: 'text/plain' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = fileName.replace(/\.(fasta|fa|txt)$/i, '_cleaned.fasta');
+                a.click();
+                URL.revokeObjectURL(a.href);
+                
+                showNotification('Cleaned FASTA file downloaded', 'success');
+            } else {
+                // Multiple files - create ZIP
+                const zip = new JSZip();
+                
+                Object.entries(groupedByFile).forEach(([fileName, sequences]) => {
+                    let content = '';
+                    sequences.forEach(seq => {
+                        const cleanedHeader = cleanHeader(seq.header);
+                        const cleanedSeq = cleanSequence(seq.sequence);
+                        content += `>${cleanedHeader}\n${cleanedSeq}\n\n`;
+                    });
+                    
+                    const cleanFileName = fileName.replace(/\.(fasta|fa|txt)$/i, '_cleaned.fasta');
+                    zip.file(cleanFileName, content.trim());
+                });
+
+                const zipBlob = await zip.generateAsync({type: 'blob'});
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(zipBlob);
+                a.download = 'cleaned_fasta_files.zip';
+                a.click();
+                URL.revokeObjectURL(a.href);
+                
+                showNotification(`${fileCount} cleaned files downloaded as ZIP`, 'success');
+            }
+        }
+
+        function clearFiles() {
+            uploadedFiles = [];
+            processedSequences = [];
+            document.getElementById('fileInput').value = '';
+            document.getElementById('processButton').disabled = true;
+            document.getElementById('fileStatus').classList.add('hidden');
+            document.getElementById('preview').innerHTML = '<p>Upload files to see preview of cleaned output</p>';
+            showNotification('Files cleared', 'success');
+        }
+
+        // Update preview when options change
+        document.getElementById('replaceSpaces').addEventListener('change', generatePreview);
+        document.getElementById('removeProblematic').addEventListener('change', generatePreview);
+        document.getElementById('removeWhitespace').addEventListener('change', generatePreview);
+        document.getElementById('uppercaseSequence').addEventListener('change', generatePreview);
+    </script>
+</body>
+</html>
