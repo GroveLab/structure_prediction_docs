@@ -7,120 +7,199 @@
     <link rel="stylesheet" href="./assets/css/main.css">
     <script src="./assets/js/utils.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        /* Enhanced focus indicators */
+        button:focus, input:focus, textarea:focus, select:focus {
+            outline: 2px solid #0066cc;
+            outline-offset: 2px;
+        }
+        
+        /* Skip link for keyboard navigation */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 6px;
+            background: #000;
+            color: #fff;
+            padding: 8px;
+            text-decoration: none;
+            border-radius: 4px;
+            z-index: 1000;
+        }
+        
+        .skip-link:focus {
+            top: 6px;
+        }
+    </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <header class="nav-header">
         <div class="container">
-            <nav class="nav-links">
+            <nav class="nav-links" role="navigation" aria-label="Main navigation">
                 <a href="./Structure_Prediction_Guide.html">Home</a>
-                <a href="./input_generator.html">Input Generator</a>
+                <a href="./input_generator.html" aria-current="page">Input Generator</a>
                 <a href="./batch_input_generator.html">Batch Generator</a>
                 <a href="./format-converter.html">Format Converter</a>
+                <a href="./scp-helper.html">SCP Helper</a>
             </nav>
         </div>
     </header>
 
-    <main class="container">
+    <main class="container" id="main-content">
         <h1>Sequence Generator for Biomolecular Models</h1>
         <p>Enter up to four protein sequences and their names, then select the model to generate formatted output.</p>
 
-        <div class="card">
-            <h2>Sequence 1 (Required)</h2>
+        <fieldset class="card">
+            <legend>Sequence 1 (Required)</legend>
             <div class="form-group">
                 <label for="name1">Protein Name</label>
-                <input type="text" id="name1" class="input" placeholder="Enter protein name">
+                <input type="text" id="name1" class="input" placeholder="Enter protein name" aria-describedby="name1-help">
+                <div id="name1-help" class="help-text sr-only">Provide a descriptive name for the first protein sequence</div>
+                
                 <label for="seq1">Sequence</label>
-                <textarea id="seq1" class="input" placeholder="Enter protein sequence"></textarea>
+                <div class="sequence-input-zone" data-target="1">
+                    <textarea id="seq1" class="input" placeholder="Enter protein sequence or drag FASTA file here" required aria-describedby="seq1-help" aria-invalid="false"></textarea>
+                    <div class="fasta-drop-overlay hidden">
+                        <p>Drop FASTA file to auto-populate</p>
+                    </div>
+                </div>
+                <div id="seq1-status" class="sequence-status hidden"></div>
+                <div id="seq1-help" class="help-text">Enter valid amino acid sequence using standard single-letter codes (ACDEFGHIKLMNPQRSTVWY) or drag a FASTA file</div>
             </div>
-        </div>
+        </fieldset>
 
-        <div class="card">
-            <h2>Sequence 2 (Optional)</h2>
+        <fieldset class="card">
+            <legend>Sequence 2 (Optional)</legend>
             <div class="form-group">
                 <label for="name2">Protein Name</label>
-                <input type="text" id="name2" class="input" placeholder="Enter protein name">
+                <input type="text" id="name2" class="input" placeholder="Enter protein name" aria-describedby="name2-help">
+                <div id="name2-help" class="help-text sr-only">Optional: Provide a name for the second protein sequence</div>
+                
                 <label for="seq2">Sequence</label>
-                <textarea id="seq2" class="input" placeholder="Enter protein sequence"></textarea>
+                <div class="sequence-input-zone" data-target="2">
+                    <textarea id="seq2" class="input" placeholder="Enter protein sequence or drag FASTA file here" aria-describedby="seq2-help" aria-invalid="false"></textarea>
+                    <div class="fasta-drop-overlay hidden">
+                        <p>Drop FASTA file to auto-populate</p>
+                    </div>
+                </div>
+                <div id="seq2-status" class="sequence-status hidden"></div>
+                <div id="seq2-help" class="help-text">Optional: Enter amino acid sequence using standard single-letter codes or drag a FASTA file</div>
             </div>
-        </div>
+        </fieldset>
 
-        <div class="card">
-            <h2>Sequence 3 (Optional)</h2>
+        <fieldset class="card">
+            <legend>Sequence 3 (Optional)</legend>
             <div class="form-group">
                 <label for="name3">Protein Name</label>
-                <input type="text" id="name3" class="input" placeholder="Enter protein name">
+                <input type="text" id="name3" class="input" placeholder="Enter protein name" aria-describedby="name3-help">
+                <div id="name3-help" class="help-text sr-only">Optional: Provide a name for the third protein sequence</div>
+                
                 <label for="seq3">Sequence</label>
-                <textarea id="seq3" class="input" placeholder="Enter protein sequence"></textarea>
+                <div class="sequence-input-zone" data-target="3">
+                    <textarea id="seq3" class="input" placeholder="Enter protein sequence or drag FASTA file here" aria-describedby="seq3-help" aria-invalid="false"></textarea>
+                    <div class="fasta-drop-overlay hidden">
+                        <p>Drop FASTA file to auto-populate</p>
+                    </div>
+                </div>
+                <div id="seq3-status" class="sequence-status hidden"></div>
+                <div id="seq3-help" class="help-text">Optional: Enter amino acid sequence using standard single-letter codes or drag a FASTA file</div>
             </div>
-        </div>
+        </fieldset>
 
-        <div class="card">
-            <h2>Sequence 4 (Optional)</h2>
+        <fieldset class="card">
+            <legend>Sequence 4 (Optional)</legend>
             <div class="form-group">
                 <label for="name4">Protein Name</label>
-                <input type="text" id="name4" class="input" placeholder="Enter protein name">
+                <input type="text" id="name4" class="input" placeholder="Enter protein name" aria-describedby="name4-help">
+                <div id="name4-help" class="help-text sr-only">Optional: Provide a name for the fourth protein sequence</div>
+                
                 <label for="seq4">Sequence</label>
-                <textarea id="seq4" class="input" placeholder="Enter protein sequence"></textarea>
+                <div class="sequence-input-zone" data-target="4">
+                    <textarea id="seq4" class="input" placeholder="Enter protein sequence or drag FASTA file here" aria-describedby="seq4-help" aria-invalid="false"></textarea>
+                    <div class="fasta-drop-overlay hidden">
+                        <p>Drop FASTA file to auto-populate</p>
+                    </div>
+                </div>
+                <div id="seq4-status" class="sequence-status hidden"></div>
+                <div id="seq4-help" class="help-text">Optional: Enter amino acid sequence using standard single-letter codes or drag a FASTA file</div>
             </div>
-        </div>
+        </fieldset>
 
-        <div class="card">
-            <h2>Output Configuration</h2>
+        <fieldset class="card">
+            <legend>Output Configuration</legend>
             <div class="form-group">
                 <label for="model">Select Model:</label>
-                <select id="model" class="input" onchange="handleModelChange()">
+                <select id="model" class="input" onchange="handleModelChange()" aria-describedby="model-help">
                     <option value="boltz">Boltz-1</option>
                     <option value="chai">Chai-1</option>
                     <option value="colabfold">ColabFold</option>
                     <option value="esmfold">ESMFold</option>
                     <option value="alphafold3">AlphaFold3</option>
                 </select>
+                <div id="model-help" class="help-text sr-only">Choose the biomolecular prediction model for output formatting</div>
             </div>
 
-            <div class="button-group">
-                <button class="button" onclick="generateOutput()">Generate Output</button>
-                <button class="button" onclick="saveOutput()">Save File</button>
-                <button class="button" onclick="copyToClipboard(document.getElementById('output').textContent)">Copy to Clipboard</button>
+            <div class="button-group" role="group" aria-label="Output actions">
+                <button class="button" onclick="generateOutput()" aria-describedby="generate-help">Generate Output</button>
+                <button class="button" onclick="saveOutput()" aria-describedby="save-help">Save File</button>
+                <button class="button" onclick="copyToClipboard(document.getElementById('output').textContent)" aria-label="Copy generated output to clipboard" aria-describedby="copy-help">Copy to Clipboard</button>
+                <div id="generate-help" class="help-text sr-only">Creates formatted output based on input sequences and selected model</div>
+                <div id="save-help" class="help-text sr-only">Downloads the generated output as a file</div>
+                <div id="copy-help" class="help-text sr-only">Copies the generated output text to your clipboard</div>
             </div>
-        </div>
+        </fieldset>
 
-        <div id="af3options" class="card hidden">
-            <h2>AlphaFold3 Options</h2>
+        <fieldset id="af3options" class="card hidden">
+            <legend>AlphaFold3 Options</legend>
             <div class="form-group">
                 <label for="numPredictions">Number of Predictions:</label>
-                <input type="number" id="numPredictions" class="input" min="1" max="100" value="1">
-                <small>Each prediction will use a different random seed</small>
+                <input type="number" id="numPredictions" class="input" min="1" max="100" value="1" aria-describedby="predictions-help">
+                <div id="predictions-help" class="help-text">Each prediction will use a different random seed</div>
                 
                 <div class="checkbox-group">
-                    <input type="checkbox" id="useTemplates" unchecked>
+                    <input type="checkbox" id="useTemplates" aria-describedby="templates-help">
                     <label for="useTemplates">Use Templates</label>
+                    <div id="templates-help" class="help-text sr-only">Enable template-based structure prediction for improved accuracy</div>
                 </div>
             </div>
-        </div>
+        </fieldset>
 
-        <div id="boltzoptions" class="card hidden">
-            <h2>Boltz Options</h2>
+        <fieldset id="boltzoptions" class="card hidden">
+            <legend>Boltz Options</legend>
             <div class="form-group">
                 <label for="numRuns">Number of Runs:</label>
-                <input type="number" id="numRuns" class="input" min="1" max="100" value="1">
-                <small>Each run will use a different random seed</small>
+                <input type="number" id="numRuns" class="input" min="1" max="100" value="1" aria-describedby="boltz-runs-help">
+                <div id="boltz-runs-help" class="help-text">Each run will use a different random seed</div>
             </div>
-        </div>
+        </fieldset>
 
-        <div id="chaioptions" class="card hidden">
-            <h2>Chai Options</h2>
+        <fieldset id="chaioptions" class="card hidden">
+            <legend>Chai Options</legend>
             <div class="form-group">
                 <label for="chaiRuns">Number of Runs:</label>
-                <input type="number" id="chaiRuns" class="input" min="1" max="100" value="1">
-                <small>Each run will use a different random seed</small>
+                <input type="number" id="chaiRuns" class="input" min="1" max="100" value="1" aria-describedby="chai-runs-help">
+                <div id="chai-runs-help" class="help-text">Each run will use a different random seed</div>
             </div>
-        </div>
+        </fieldset>
 
         <div class="card">
             <h2>Generated Output:</h2>
             <div class="code-block">
-                <button class="copy-button" onclick="copyToClipboard(this.nextElementSibling.textContent)">Copy</button>
-                <pre><code id="output"></code></pre>
+                <button class="copy-button" onclick="copyToClipboard(document.getElementById('output').textContent)" aria-label="Copy output code to clipboard">Copy</button>
+                <pre role="region" aria-label="Generated output code" tabindex="0"><code id="output" aria-live="polite"></code></pre>
             </div>
         </div>
     </main>
@@ -174,36 +253,82 @@
         }
 
         function generateOutput() {
-            const seqs = [
-                { sequence: cleanSequence(document.getElementById('seq1').value.trim()), name: document.getElementById('name1').value.trim() },
-                { sequence: cleanSequence(document.getElementById('seq2').value.trim()), name: document.getElementById('name2').value.trim() },
-                { sequence: cleanSequence(document.getElementById('seq3').value.trim()), name: document.getElementById('name3').value.trim() },
-                { sequence: cleanSequence(document.getElementById('seq4').value.trim()), name: document.getElementById('name4').value.trim() }
-            ].filter(item => item.sequence);
+            return safeExecute(() => {
+                const generateButton = document.querySelector('button[onclick="generateOutput()"]');
+                showLoadingState(generateButton, 'Generating...');
 
-            const sequences = seqs.map(item => item.sequence);
-            const names = seqs.map(item => item.name);
-            const model = document.getElementById('model').value;
-            let output = '';
+                try {
+                    // Validate required fields
+                    const seq1 = document.getElementById('seq1').value.trim();
+                    const name1 = document.getElementById('name1').value.trim();
+                    
+                    if (!validateRequiredField(seq1, 'Sequence 1')) {
+                        return;
+                    }
+                    if (!validateRequiredField(name1, 'Protein Name 1')) {
+                        return;
+                    }
+                    
+                    // Validate all sequences
+                    const sequences = [
+                        { element: document.getElementById('seq1'), name: 'Sequence 1' },
+                        { element: document.getElementById('seq2'), name: 'Sequence 2' },
+                        { element: document.getElementById('seq3'), name: 'Sequence 3' },
+                        { element: document.getElementById('seq4'), name: 'Sequence 4' }
+                    ];
+                    
+                    let allValid = true;
+                    sequences.forEach(seq => {
+                        const value = seq.element.value.trim();
+                        if (value && !validateSequenceField(value, seq.name)) {
+                            seq.element.classList.add('error');
+                            allValid = false;
+                        } else {
+                            seq.element.classList.remove('error');
+                            if (value) seq.element.classList.add('success');
+                        }
+                    });
+                    
+                    if (!allValid) {
+                        showNotification('Please fix validation errors before generating', 'error');
+                        return;
+                    }
 
-            if (model === 'alphafold3') {
-                const numPredictions = parseInt(document.getElementById('numPredictions').value) || 1;
-                output = generateAlphaFold3JSON(sequences, names, numPredictions);
-            } else if (model === 'boltz') {
-                seqs.forEach((item, i) => {
-                    const chainId = String.fromCharCode(65 + i);
-                    output += `>${chainId}|protein|\n${item.sequence}\n`;
-                });
-            } else if (model === 'chai') {
-                seqs.forEach((item, i) => {
-                    output += `>protein|name=${item.name || `Sequence${i + 1}`}\n${item.sequence}\n`;
-                });
-            } else if (model === 'colabfold' || model === 'esmfold') {
-                const complexName = names.filter(n => n).join('_') || 'UnnamedComplex';
-                output += `>${complexName}\n${sequences.join(':')}\n`;
-            }
+                    const seqs = [
+                        { sequence: cleanSequence(document.getElementById('seq1').value.trim()), name: document.getElementById('name1').value.trim() },
+                        { sequence: cleanSequence(document.getElementById('seq2').value.trim()), name: document.getElementById('name2').value.trim() },
+                        { sequence: cleanSequence(document.getElementById('seq3').value.trim()), name: document.getElementById('name3').value.trim() },
+                        { sequence: cleanSequence(document.getElementById('seq4').value.trim()), name: document.getElementById('name4').value.trim() }
+                    ].filter(item => item.sequence);
 
-            document.getElementById('output').textContent = output;
+                    const sequences = seqs.map(item => item.sequence);
+                    const names = seqs.map(item => item.name);
+                    const model = document.getElementById('model').value;
+                    let output = '';
+
+                    if (model === 'alphafold3') {
+                        const numPredictions = parseInt(document.getElementById('numPredictions').value) || 1;
+                        output = generateAlphaFold3JSON(sequences, names, numPredictions);
+                    } else if (model === 'boltz') {
+                        seqs.forEach((item, i) => {
+                            const chainId = String.fromCharCode(65 + i);
+                            output += `>${chainId}|protein|\n${item.sequence}\n`;
+                        });
+                    } else if (model === 'chai') {
+                        seqs.forEach((item, i) => {
+                            output += `>protein|name=${item.name || `Sequence${i + 1}`}\n${item.sequence}\n`;
+                        });
+                    } else if (model === 'colabfold' || model === 'esmfold') {
+                        const complexName = names.filter(n => n).join('_') || 'UnnamedComplex';
+                        output += `>${complexName}\n${sequences.join(':')}\n`;
+                    }
+
+                    document.getElementById('output').textContent = output;
+                    showNotification('Output generated successfully!', 'success');
+                } finally {
+                    hideLoadingState(generateButton);
+                }
+            }, 'Failed to generate output');
         }
 
         async function saveOutput() {
@@ -271,17 +396,107 @@
             a.click();
         }
 
-        function copyToClipboard() {
-            const output = document.getElementById('output').textContent;
-            if (!output.trim()) {
-                alert('Please generate output before copying.');
-                return;
-            }
+        // Setup FASTA file drop zones for sequence inputs
+        document.addEventListener('DOMContentLoaded', function() {
+            const sequenceZones = document.querySelectorAll('.sequence-input-zone');
+            
+            sequenceZones.forEach(zone => {
+                const targetNum = zone.getAttribute('data-target');
+                const textarea = zone.querySelector('textarea');
+                const overlay = zone.querySelector('.fasta-drop-overlay');
+                
+                // Drag over
+                zone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    zone.classList.add('drag-over');
+                    overlay.classList.remove('hidden');
+                });
+                
+                // Drag leave
+                zone.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    zone.classList.remove('drag-over');
+                    overlay.classList.add('hidden');
+                });
+                
+                // Drop
+                zone.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    zone.classList.remove('drag-over');
+                    overlay.classList.add('hidden');
+                    
+                    const files = Array.from(e.dataTransfer.files);
+                    const fastaFile = files.find(file => 
+                        file.name.toLowerCase().endsWith('.fasta') || 
+                        file.name.toLowerCase().endsWith('.fa') || 
+                        file.name.toLowerCase().endsWith('.txt')
+                    );
+                    
+                    if (!fastaFile) {
+                        showNotification('Please drop a FASTA file (.fasta, .fa, .txt)', 'error');
+                        return;
+                    }
+                    
+                    try {
+                        const text = await fastaFile.text();
+                        const parsedFasta = parseFastaFile(text);
+                        
+                        if (!parsedFasta.sequence) {
+                            showNotification('No sequence found in FASTA file', 'error');
+                            return;
+                        }
+                        
+                        // Auto-populate sequence and name
+                        textarea.value = parsedFasta.sequence;
+                        const nameInput = document.getElementById(`name${targetNum}`);
+                        if (nameInput && parsedFasta.name && !nameInput.value.trim()) {
+                            nameInput.value = parsedFasta.name;
+                        }
+                        
+                        // Validate the sequence
+                        if (validateSequenceField(parsedFasta.sequence, `Sequence ${targetNum}`)) {
+                            textarea.classList.add('success');
+                            textarea.classList.remove('error');
+                        } else {
+                            textarea.classList.add('error');
+                            textarea.classList.remove('success');
+                        }
+                        
+                        // Show status feedback
+                        const statusElement = document.getElementById(`seq${targetNum}-status`);
+                        statusElement.textContent = `✅ Loaded: ${parsedFasta.name} (${parsedFasta.sequence.length} amino acids)`;
+                        statusElement.classList.remove('hidden');
+                        
+                        showNotification(`FASTA file loaded into Sequence ${targetNum}`, 'success');
+                    } catch (error) {
+                        showNotification('Error reading FASTA file', 'error');
+                    }
+                });
+            });
+        });
 
-            navigator.clipboard.writeText(output)
-                .then(() => alert('Output copied to clipboard!'))
-                .catch(err => alert('Failed to copy output: ' + err));
+        function parseFastaFile(text) {
+            const lines = text.split('\n');
+            let name = '';
+            let sequence = '';
+            
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                if (trimmedLine.startsWith('>')) {
+                    if (!name) { // Take the first header
+                        name = trimmedLine.substring(1).trim();
+                    }
+                } else if (trimmedLine) {
+                    sequence += trimmedLine;
+                }
+            }
+            
+            return { 
+                name: name || 'Imported_Sequence', 
+                sequence: cleanSequence(sequence) 
+            };
         }
+
     </script>
 </body>
 </html>

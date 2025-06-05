@@ -6,34 +6,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="./assets/css/main.css">
     <script src="./assets/js/utils.js"></script>
+    <style>
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        /* Enhanced focus indicators */
+        button:focus, input:focus, textarea:focus, select:focus {
+            outline: 2px solid #0066cc;
+            outline-offset: 2px;
+        }
+        
+        /* Skip link for keyboard navigation */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 6px;
+            background: #000;
+            color: #fff;
+            padding: 8px;
+            text-decoration: none;
+            border-radius: 4px;
+            z-index: 1000;
+        }
+        
+        .skip-link:focus {
+            top: 6px;
+        }
+    </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <header class="nav-header">
         <div class="container">
-            <nav class="nav-links">
+            <nav class="nav-links" role="navigation" aria-label="Main navigation">
                 <a href="./Structure_Prediction_Guide.html">Home</a>
                 <a href="./input_generator.html">Input Generator</a>
                 <a href="./batch_input_generator.html">Batch Generator</a>
                 <a href="./format-converter.html">Format Converter</a>
-                <a href="./scp-helper.html">SCP Helper</a>
+                <a href="./scp-helper.html" aria-current="page">SCP Helper</a>
             </nav>
         </div>
     </header>
 
-    <main class="container">
+    <main class="container" id="main-content">
         <h1>SCP Command Generator for Structure Prediction</h1>
         
-        <div class="form-group">
+        <fieldset class="form-group">
+            <legend class="sr-only">Transfer Direction</legend>
             <label for="direction">Direction:</label>
-            <select id="direction">
+            <select id="direction" aria-describedby="direction-help">
                 <option value="to">To Remote Server (Local → Remote)</option>
                 <option value="from" selected>From Remote Server (Remote → Local)</option>
             </select>
-        </div>
+            <div id="direction-help" class="help-text sr-only">Choose whether to upload files to the server or download files from the server</div>
+        </fieldset>
 
-        <div class="form-group">
+        <fieldset class="form-group">
+            <legend class="sr-only">Target Directory Selection</legend>
             <label for="directory">Target Directory:</label>
-            <select id="directory">
+            <select id="directory" aria-describedby="directory-help">
                 <optgroup label="Inputs">
                     <option value="Inputs/AF3_Inputs">AF3_Inputs</option>
                     <option value="Inputs/Boltz_Inputs">Boltz_Inputs</option>
@@ -49,41 +89,53 @@
                     <option value="Outputs/ESMFold_Outputs">ESMFold_Outputs</option>
                 </optgroup>
             </select>
-        </div>
+            <div id="directory-help" class="help-text sr-only">Select the target directory on the remote server for file transfer</div>
+        </fieldset>
 
-        <div class="form-group" id="remote-subdir-group">
+        <fieldset class="form-group" id="remote-subdir-group">
+            <legend class="sr-only">Remote Subdirectory</legend>
             <label for="remote-subdir">Remote Subdirectory:</label>
-            <input type="text" id="remote-subdir" placeholder="e.g., protein1/ or results/run2/">
-            <small id="subdir-hint">You must specify a subdirectory when copying from remote server</small>
-        </div>
+            <input type="text" id="remote-subdir" placeholder="e.g., protein1/ or results/run2/" aria-describedby="subdir-hint subdir-help">
+            <div id="subdir-hint" class="help-text">You must specify a subdirectory when copying from remote server</div>
+            <div id="subdir-help" class="help-text sr-only">Enter the specific subdirectory path within the target directory</div>
+        </fieldset>
 
-        <div class="form-group">
+        <fieldset class="form-group">
+            <legend class="sr-only">Local Path</legend>
             <label for="local-path">Local File/Directory Path:</label>
-            <input type="text" id="local-path" value="~/Downloads/" placeholder="e.g., ~/Downloads/myprotein.fasta or ~/Downloads/results/">
-        </div>
+            <input type="text" id="local-path" value="~/Downloads/" placeholder="e.g., ~/Downloads/myprotein.fasta or ~/Downloads/results/" aria-describedby="local-path-help">
+            <div id="local-path-help" class="help-text sr-only">Specify the local file or directory path for the transfer</div>
+        </fieldset>
         
-        <div class="form-group">
-            <label for="options">SCP Options:</label>
-            <select id="options" multiple size="4">
+        <fieldset class="form-group">
+            <legend>SCP Options</legend>
+            <label for="options" class="sr-only">Available SCP command options</label>
+            <select id="options" multiple size="4" aria-describedby="options-help">
                 <option value="-r" selected>-r (Recursive - for directories)</option>
                 <option value="-p">-p (Preserve modification times)</option>
                 <option value="-C">-C (Compress data)</option>
                 <option value="-v">-v (Verbose mode)</option>
             </select>
-            <small>Hold Ctrl/Cmd to select multiple options</small>
+            <div id="options-help" class="help-text">Hold Ctrl/Cmd to select multiple options</div>
+        </fieldset>
+
+        <div class="form-group" role="group" aria-label="Command generation">
+            <button id="generate-btn" class="button" aria-describedby="generate-help">Generate Command</button>
+            <div id="generate-help" class="help-text sr-only">Creates the SCP command based on your selections</div>
         </div>
 
-        <button id="generate-btn" class="button">Generate Command</button>
-
-        <div class="command-output" id="command-output">
+        <div class="command-output" id="command-output" role="region" aria-label="Generated SCP command" aria-live="polite" tabindex="0">
             Commands will appear here
         </div>
 
-        <button id="copy-btn" class="button">Copy to Clipboard</button>
+        <div class="form-group" role="group" aria-label="Command actions">
+            <button id="copy-btn" class="button" aria-label="Copy generated command to clipboard" aria-describedby="copy-help">Copy to Clipboard</button>
+            <div id="copy-help" class="help-text sr-only">Copies the generated SCP command to your clipboard</div>
+        </div>
 
         <div class="card">
             <h3>Current Remote Directory Structure:</h3>
-            <pre>
+            <pre role="tree" aria-label="Remote server directory structure" tabindex="0">
 ~/Structure_Prediction
 ├── Inputs
 │   ├── AF3_Inputs
@@ -203,19 +255,28 @@
                 explanation = `\n\n# This command copies from the remote server to your local machine\n# Source: <span class="target-path">${pathDisplay}</span>`;
             }
             
-            document.getElementById('command-output').innerHTML = `${command}${explanation}`;
+            const outputElement = document.getElementById('command-output');
+            outputElement.textContent = command;
+            
+            // Safely add explanation as separate element
+            const explanationElement = document.createElement('div');
+            explanationElement.className = 'command-explanation';
+            explanationElement.innerHTML = explanation; // Safe since explanation is controlled content
+            outputElement.appendChild(explanationElement);
         }
 
         function copyToClipboard() {
             const commandText = document.getElementById('command-output').innerText;
-            const textArea = document.createElement('textarea');
-            textArea.value = commandText.split('\n\n')[0]; // Just copy the command, not the explanation
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
+            const command = commandText.split('\n\n')[0]; // Just copy the command, not the explanation
             
-            alert('Command copied to clipboard!');
+            if (!command.trim()) {
+                showNotification('Please generate a command first', 'error');
+                return;
+            }
+
+            navigator.clipboard.writeText(command)
+                .then(() => showNotification('Command copied to clipboard!', 'success'))
+                .catch(err => showNotification('Failed to copy command', 'error'));
         }
     </script>
 </body>

@@ -7,30 +7,75 @@
     <link rel="stylesheet" href="./assets/css/main.css">
     <script src="./assets/js/utils.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <style>
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        /* Enhanced focus indicators */
+        button:focus, input:focus, textarea:focus, select:focus {
+            outline: 2px solid #0066cc;
+            outline-offset: 2px;
+        }
+        
+        /* Skip link for keyboard navigation */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 6px;
+            background: #000;
+            color: #fff;
+            padding: 8px;
+            text-decoration: none;
+            border-radius: 4px;
+            z-index: 1000;
+        }
+        
+        .skip-link:focus {
+            top: 6px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <header class="nav-header">
         <div class="container">
-            <nav class="nav-links">
+            <nav class="nav-links" role="navigation" aria-label="Main navigation">
                 <a href="./Structure_Prediction_Guide.html">Home</a>
                 <a href="./input_generator.html">Input Generator</a>
                 <a href="./batch_input_generator.html">Batch Generator</a>
-                <a href="./format-converter.html">Format Converter</a>
+                <a href="./format-converter.html" aria-current="page">Format Converter</a>
+                <a href="./scp-helper.html">SCP Helper</a>
             </nav>
         </div>
     </header>
 
-    <main class="container">
+    <main class="container" id="main-content">
         <h1>Biomolecular Format Converter</h1>
         <p>Convert between different biomolecular sequence formats. Choose input format before selecting files.</p>
 
-        <div class="card">
-            <h2>Input Selection</h2>
+        <fieldset class="card">
+            <legend>Input Selection</legend>
             <div class="form-group">
-                <input type="file" id="fileInput" multiple accept=".fasta,.txt,.json" class="hidden"/>
-                <label for="fileInput" class="button">Select Files</label>
+                <input type="file" id="fileInput" multiple accept=".fasta,.txt,.json" class="hidden" aria-describedby="file-help"/>
+                <label for="fileInput" class="button" aria-describedby="file-select-help">Select Files</label>
+                <div id="file-help" class="help-text sr-only">Choose files with .fasta, .txt, or .json extensions</div>
+                <div id="file-select-help" class="help-text sr-only">Opens file browser to select biomolecular format files for conversion</div>
                 
-                <select id="inputFormat" class="input" onchange="handleInputFormatChange()">
+                <label for="inputFormat" class="sr-only">Input Format</label>
+                <select id="inputFormat" class="input" onchange="handleInputFormatChange()" aria-describedby="input-format-help">
                     <option value="">Select Input Format</option>
                     <option value="boltz">Boltz-1</option>
                     <option value="chai">Chai-1</option>
@@ -38,8 +83,10 @@
                     <option value="esmfold">ESMFold</option>
                     <option value="alphafold3">AlphaFold3</option>
                 </select>
+                <div id="input-format-help" class="help-text sr-only">Choose the format of your input files</div>
                 
-                <select id="outputFormat" class="input" onchange="handleOutputFormatChange()">
+                <label for="outputFormat" class="sr-only">Output Format</label>
+                <select id="outputFormat" class="input" onchange="handleOutputFormatChange()" aria-describedby="output-format-help">
                     <option value="">Select Output Format</option>
                     <option value="boltz">Boltz-1</option>
                     <option value="chai">Chai-1</option>
@@ -47,29 +94,32 @@
                     <option value="esmfold">ESMFold</option>
                     <option value="alphafold3">AlphaFold3</option>
                 </select>
+                <div id="output-format-help" class="help-text sr-only">Choose the desired output format for conversion</div>
             </div>
 
-            <div class="button-group">
-                <button id="previewButton" class="button" onclick="updatePreview()" disabled>Update Preview</button>
-                <button id="convertButton" class="button" onclick="convertFiles()" disabled>Convert</button>
+            <div class="button-group" role="group" aria-label="File conversion actions">
+                <button id="previewButton" class="button" onclick="updatePreview()" disabled aria-describedby="preview-help">Update Preview</button>
+                <button id="convertButton" class="button" onclick="convertFiles()" disabled aria-describedby="convert-help">Convert</button>
+                <div id="preview-help" class="help-text sr-only">Shows a preview of how files will be converted</div>
+                <div id="convert-help" class="help-text sr-only">Converts selected files to the chosen output format</div>
             </div>
-        </div>
+        </fieldset>
 
         <div class="card">
             <h2>Format Information</h2>
-            <div id="formatInfo" class="code-block">
+            <div id="formatInfo" class="code-block" role="region" aria-label="Format information display" aria-live="polite" tabindex="0">
                 Select an input format to see format details...
             </div>
         </div>
 
         <div id="statusCard" class="card hidden">
             <h2>Status</h2>
-            <div id="status" class="status"></div>
+            <div id="status" class="status" role="status" aria-live="polite"></div>
         </div>
 
         <div class="card">
             <h2>Preview</h2>
-            <div id="preview" class="preview-section"></div>
+            <div id="preview" class="preview-section" role="region" aria-label="Conversion preview" aria-live="polite"></div>
         </div>
     </main>
 

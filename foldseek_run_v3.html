@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Foldseek: Interactive Command Generator</title>
+    <script src="./assets/js/utils.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -158,22 +159,6 @@
             document.getElementById("generated_command").textContent = command;
         }
         
-        function copyCode(button) {
-            const pre = button.nextElementSibling;
-            const code = pre.textContent;
-            navigator.clipboard.writeText(code).then(() => {
-                button.textContent = 'Copied!';
-                setTimeout(() => {
-                    button.textContent = 'Copy';
-                }, 2000);
-            }).catch(err => {
-                console.error('Failed to copy:', err);
-                button.textContent = 'Failed to copy';
-                setTimeout(() => {
-                    button.textContent = 'Copy';
-                }, 2000);
-            });
-        }
 
         function toggleCustomFields() {
             const customFields = document.getElementById('custom-fields');
@@ -197,11 +182,24 @@
     </script>
 </head>
 <body>
-    <h1>Foldseek: Interactive Command Generator</h1>
+    <header class="nav-header">
+        <div class="container">
+            <nav class="nav-links">
+                <a href="./Structure_Prediction_Guide.html">Home</a>
+                <a href="./input_generator.html">Input Generator</a>
+                <a href="./batch_input_generator.html">Batch Generator</a>
+                <a href="./format-converter.html">Format Converter</a>
+                <a href="./scp-helper.html">SCP Helper</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <h1>Foldseek: Interactive Command Generator</h1>
     
     <h2>Activate Conda Environment</h2>
     <div class="code-block">
-        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+        <button class="copy-button" onclick="copyToClipboard(this.nextElementSibling.textContent)">Copy</button>
         <pre><code>conda activate foldseek_2025</code></pre>
     </div>
     
@@ -271,8 +269,9 @@
     
     <h3>Generated Command</h3>
     <div class="code-block">
-        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+        <button class="copy-button" onclick="copyToClipboard(this.nextElementSibling.textContent)">Copy</button>
         <pre><code id="generated_command"></code></pre>
     </div>
+    </main>
 </body>
 </html>

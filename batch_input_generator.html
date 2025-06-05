@@ -11,90 +11,326 @@
         .hidden {
             display: none;
         }
+        
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        /* Enhanced focus indicators */
+        button:focus, input:focus, textarea:focus, select:focus {
+            outline: 2px solid #0066cc;
+            outline-offset: 2px;
+        }
+        
+        /* Skip link for keyboard navigation */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 6px;
+            background: #000;
+            color: #fff;
+            padding: 8px;
+            text-decoration: none;
+            border-radius: 4px;
+            z-index: 1000;
+        }
+        
+        .skip-link:focus {
+            top: 6px;
+        }
+        
+        .drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+        
+        .drop-zone.drag-over {
+            border-color: #0066cc;
+            background-color: #f0f8ff;
+        }
     </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <header class="nav-header">
         <div class="container">
-            <nav class="nav-links">
+            <nav class="nav-links" role="navigation" aria-label="Main navigation">
                 <a href="./Structure_Prediction_Guide.html">Home</a>
                 <a href="./input_generator.html">Input Generator</a>
-                <a href="./batch_input_generator.html">Batch Generator</a>
+                <a href="./batch_input_generator.html" aria-current="page">Batch Generator</a>
                 <a href="./format-converter.html">Format Converter</a>
+                <a href="./scp-helper.html">SCP Helper</a>
             </nav>
         </div>
     </header>
 
-    <main class="container">
+    <main class="container" id="main-content">
         <h1>Batch Sequence Generator</h1>
-        <p>Select multiple FASTA files to process. Files in the same directory will be treated as part of the same complex.</p>
+        <p>Batch process protein sequences for structure prediction and interaction analysis. Choose your workflow below.</p>
 
-        <div class="card">
-            <h2>Input Selection</h2>
+        <fieldset class="card">
+            <legend>Analysis Strategy</legend>
             <div class="form-group">
-                <input type="file" id="fileInput" multiple accept=".fasta,.txt" webkitdirectory directory/>
-                <label for="fileInput" class="button">Select Directory</label>
-                
-                <select id="model" class="input" onchange="handleModelChange()">
+                <label for="analysisMode">Choose Analysis Mode:</label>
+                <select id="analysisMode" class="input" onchange="handleAnalysisModeChange()" aria-describedby="mode-help">
+                    <option value="single">Multiple Single-Chain Inputs</option>
+                    <option value="allvsall">All vs All Pairwise Comparisons</option>
+                    <option value="avsb">A vs B Group Comparisons</option>
+                    <option value="directory">Pre-organized Directory Structure</option>
+                </select>
+                <div id="mode-help" class="help-text">Select the type of protein interaction analysis you want to perform</div>
+            </div>
+        </fieldset>
+
+        <!-- Single Chain Mode -->
+        <fieldset class="card" id="singleMode">
+            <legend>Multiple Single-Chain Inputs</legend>
+            <div class="form-group">
+                <div class="drop-zone" id="singleDropZone" role="button" tabindex="0" aria-label="Single chain inputs file drop zone">
+                    <p>Drop FASTA files to process each as a separate single-chain input</p>
+                    <button type="button" class="button" onclick="selectFiles('single')">Select Files</button>
+                </div>
+                <div id="singleStatus" class="drop-status hidden"></div>
+                <div class="help-text">Each sequence will be processed as a separate single-chain structure prediction. Supports multi-FASTA files.</div>
+            </div>
+        </fieldset>
+
+        <!-- All vs All Mode -->
+        <fieldset class="card hidden" id="allvsallMode">
+            <legend>All vs All Pairwise Comparisons</legend>
+            <div class="form-group">
+                <div class="drop-zone" id="allvsallDropZone" role="button" tabindex="0" aria-label="All vs all file drop zone">
+                    <p>Drop FASTA files to generate all possible pairwise combinations</p>
+                    <button type="button" class="button" onclick="selectFiles('allvsall')">Select Files</button>
+                </div>
+                <div id="allvsallStatus" class="drop-status hidden"></div>
+                <div class="help-text">Creates complexes for every possible pair combination. Supports multi-FASTA files.</div>
+            </div>
+        </fieldset>
+
+        <!-- A vs B Mode -->
+        <fieldset class="card hidden" id="avsbMode">
+            <legend>A vs B Group Comparisons</legend>
+            <div class="form-group">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <div class="drop-zone" id="groupADropZone" role="button" tabindex="0" aria-label="Group A file drop zone">
+                            <h4>Group A</h4>
+                            <p>Drop Group A FASTA files here</p>
+                            <button type="button" class="button" onclick="selectFiles('groupA')">Select Group A</button>
+                        </div>
+                        <div id="groupAStatus" class="drop-status hidden"></div>
+                    </div>
+                    <div>
+                        <div class="drop-zone" id="groupBDropZone" role="button" tabindex="0" aria-label="Group B file drop zone">
+                            <h4>Group B</h4>
+                            <p>Drop Group B FASTA files here</p>
+                            <button type="button" class="button" onclick="selectFiles('groupB')">Select Group B</button>
+                        </div>
+                        <div id="groupBStatus" class="drop-status hidden"></div>
+                    </div>
+                </div>
+                <div class="help-text">Creates complexes for every Group A protein paired with every Group B protein. Supports multi-FASTA files.</div>
+            </div>
+        </fieldset>
+
+        <!-- Directory Mode -->
+        <fieldset class="card hidden" id="directoryMode">
+            <legend>Pre-organized Directory Structure</legend>
+            <div class="form-group">
+                <div class="drop-zone" id="directoryDropZone" role="button" tabindex="0" aria-label="Directory selection zone">
+                    <p>Select directory with pre-organized complex subdirectories</p>
+                    <button type="button" class="button" onclick="selectDirectory()">Select Directory</button>
+                </div>
+                <div id="directoryStatus" class="drop-status hidden"></div>
+                <div class="help-text">Each subdirectory becomes a separate complex (for very specific, pre-planned structures)</div>
+            </div>
+        </fieldset>
+
+        <!-- Hidden file inputs -->
+        <input type="file" id="fileInput" multiple accept=".fasta,.txt,.fa" style="display: none;"/>
+        <input type="file" id="dirInput" multiple webkitdirectory style="display: none;"/>
+        <input type="file" id="groupAInput" multiple accept=".fasta,.txt,.fa" style="display: none;"/>
+        <input type="file" id="groupBInput" multiple accept=".fasta,.txt,.fa" style="display: none;"/>
+
+        <fieldset class="card">
+            <legend>Model Configuration</legend>
+            <div class="form-group">
+                <label for="model">Select Model:</label>
+                <select id="model" class="input" onchange="handleModelChange()" aria-describedby="model-help">
                     <option value="alphafold3">AlphaFold3</option>
                     <option value="boltz">Boltz-1</option>
                     <option value="chai">Chai-1</option>
                     <option value="colabfold">ColabFold</option>
                     <option value="esmfold">ESMFold</option>
                 </select>
+                <div id="model-help" class="help-text sr-only">Choose the biomolecular prediction model for batch processing</div>
                 
-                <button id="processButton" class="button" onclick="processAll()" disabled>Process All</button>
+                <button id="processButton" class="button" onclick="processAll()" disabled aria-describedby="process-help">Process All</button>
+                <div id="process-help" class="help-text sr-only">Processes all selected files and generates output for the chosen model</div>
             </div>
-        </div>
+        </fieldset>
 
-        <div id="af3options" class="card hidden">
-            <h2>AlphaFold3 Options</h2>
+        <fieldset id="af3options" class="card hidden">
+            <legend>AlphaFold3 Options</legend>
             <div class="form-group">
                 <label for="numPredictions">Number of Predictions per Complex:</label>
-                <input type="number" id="numPredictions" class="input" min="1" max="10" value="1">
-                <small>Each prediction will use a different random seed</small>
+                <input type="number" id="numPredictions" class="input" min="1" max="10" value="1" aria-describedby="predictions-help">
+                <div id="predictions-help" class="help-text">Each prediction will use a different random seed</div>
                 
                 <div class="checkbox-group">
-                    <input type="checkbox" id="useTemplates" unchecked>
+                    <input type="checkbox" id="useTemplates" aria-describedby="templates-help">
                     <label for="useTemplates">Use Templates</label>
+                    <div id="templates-help" class="help-text sr-only">Enable template-based structure prediction for improved accuracy</div>
                 </div>
             </div>
-        </div>
+        </fieldset>
 
-        <div id="boltzoptions" class="card hidden">
-            <h2>Boltz Options</h2>
+        <fieldset id="boltzoptions" class="card hidden">
+            <legend>Boltz Options</legend>
             <div class="form-group">
                 <label for="numRuns">Number of Runs:</label>
-                <input type="number" id="numRuns" class="input" min="1" max="100" value="1">
-                <small>Each run will use a different random seed</small>
+                <input type="number" id="numRuns" class="input" min="1" max="100" value="1" aria-describedby="boltz-runs-help">
+                <div id="boltz-runs-help" class="help-text">Each run will use a different random seed</div>
             </div>
-        </div>
+        </fieldset>
 
-        <div id="chaioptions" class="card hidden">
-            <h2>Chai Options</h2>
+        <fieldset id="chaioptions" class="card hidden">
+            <legend>Chai Options</legend>
             <div class="form-group">
                 <label for="chaiRuns">Number of Runs:</label>
-                <input type="number" id="chaiRuns" class="input" min="1" max="100" value="1">
-                <small>Each run will use a different random seed</small>
+                <input type="number" id="chaiRuns" class="input" min="1" max="100" value="1" aria-describedby="chai-runs-help">
+                <div id="chai-runs-help" class="help-text">Each run will use a different random seed</div>
             </div>
-        </div>
+        </fieldset>
 
         <div class="card">
             <h2>Directory Structure</h2>
-            <div id="directoryStructure" class="code-block"></div>
-            <div id="status" class="status"></div>
+            <div id="directoryStructure" class="code-block" role="region" aria-label="Directory structure display" tabindex="0"></div>
+            <div id="status" class="status" role="status" aria-live="polite"></div>
         </div>
 
         <div class="card">
             <h2>Preview</h2>
-            <div id="preview" class="preview-section"></div>
+            <div id="preview" class="preview-section" role="region" aria-label="Batch processing preview" aria-live="polite"></div>
         </div>
     </main>
 
     <script>
         let complexes = new Map();
+        let groupAFiles = [];
+        let groupBFiles = [];
+        let analysisMode = 'single';
 
         document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+        document.getElementById('dirInput').addEventListener('change', handleDirectorySelect);
+        document.getElementById('groupAInput').addEventListener('change', handleGroupASelect);
+        document.getElementById('groupBInput').addEventListener('change', handleGroupBSelect);
+        
+        // Setup drag and drop for all zones
+        setupDropZone('singleDropZone', 'single');
+        setupDropZone('allvsallDropZone', 'allvsall');
+        setupDropZone('groupADropZone', 'groupA');
+        setupDropZone('groupBDropZone', 'groupB');
+        setupDropZone('directoryDropZone', 'directory');
+
+        function setupDropZone(zoneId, mode) {
+            const dropZone = document.getElementById(zoneId);
+            if (!dropZone) return;
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+            
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                const files = Array.from(e.dataTransfer.files);
+                
+                // Filter for FASTA files
+                const fastaFiles = files.filter(file => 
+                    file.name.toLowerCase().endsWith('.fasta') || 
+                    file.name.toLowerCase().endsWith('.fa') || 
+                    file.name.toLowerCase().endsWith('.txt')
+                );
+                
+                if (fastaFiles.length === 0) {
+                    showNotification('Please drop FASTA files (.fasta, .fa, .txt)', 'error');
+                    return;
+                }
+                
+                handleDroppedFiles(fastaFiles, mode);
+            });
+
+            // Click to select files
+            dropZone.addEventListener('click', (e) => {
+                if (e.target === dropZone || e.target.tagName === 'P' || e.target.tagName === 'H4') {
+                    selectFiles(mode);
+                }
+            });
+        }
+
+        function handleAnalysisModeChange() {
+            const mode = document.getElementById('analysisMode').value;
+            analysisMode = mode;
+            
+            // Hide all mode sections
+            document.getElementById('singleMode').classList.add('hidden');
+            document.getElementById('allvsallMode').classList.add('hidden');
+            document.getElementById('avsbMode').classList.add('hidden');
+            document.getElementById('directoryMode').classList.add('hidden');
+            
+            // Show selected mode
+            document.getElementById(mode + 'Mode').classList.remove('hidden');
+            
+            // Clear previous data and status displays
+            complexes.clear();
+            groupAFiles = [];
+            groupBFiles = [];
+            document.getElementById('processButton').disabled = true;
+            
+            // Hide all status elements
+            ['single', 'allvsall', 'groupA', 'groupB', 'directory'].forEach(statusMode => {
+                const statusElement = document.getElementById(statusMode + 'Status');
+                if (statusElement) {
+                    statusElement.classList.add('hidden');
+                }
+            });
+            
+            showDirectoryStructure();
+            generatePreview();
+        }
+
+        function selectFiles(mode) {
+            if (mode === 'groupA') {
+                document.getElementById('groupAInput').click();
+            } else if (mode === 'groupB') {
+                document.getElementById('groupBInput').click();
+            } else {
+                document.getElementById('fileInput').click();
+            }
+        }
+
+        function selectDirectory() {
+            document.getElementById('dirInput').click();
+        }
 
         function handleModelChange() {
             const model = document.getElementById('model').value;
@@ -113,32 +349,236 @@
             const files = Array.from(event.target.files);
             if (files.length === 0) return;
 
-            // Group files by directory
+            // Filter for FASTA files
+            const fastaFiles = files.filter(file => 
+                file.name.toLowerCase().endsWith('.fasta') || 
+                file.name.toLowerCase().endsWith('.fa') || 
+                file.name.toLowerCase().endsWith('.txt')
+            );
+
+            if (fastaFiles.length === 0) {
+                showNotification('Please select FASTA files (.fasta, .fa, .txt)', 'error');
+                return;
+            }
+
+            handleDroppedFiles(fastaFiles);
+        }
+
+        function handleDirectorySelect(event) {
+            const files = Array.from(event.target.files);
+            if (files.length === 0) return;
+
+            // Group files by directory (original functionality)
             complexes.clear();
+            const fastaFiles = [];
             files.forEach(file => {
                 const path = file.webkitRelativePath;
                 const parts = path.split('/');
-                if (parts.length >= 2 && file.name.toLowerCase().endsWith('.fasta')) {
-                    const complexName = parts[1];
-                    if (!complexes.has(complexName)) {
-                        complexes.set(complexName, []);
+                if (parts.length >= 2) {
+                    const complexName = parts[parts.length - 2]; // Use parent directory name
+                    if (file.name.toLowerCase().endsWith('.fasta') || 
+                        file.name.toLowerCase().endsWith('.fa') || 
+                        file.name.toLowerCase().endsWith('.txt')) {
+                        if (!complexes.has(complexName)) {
+                            complexes.set(complexName, []);
+                        }
+                        complexes.get(complexName).push(file);
+                        fastaFiles.push(file);
                     }
-                    complexes.get(complexName).push(file);
                 }
             });
+
+            if (complexes.size === 0) {
+                updateDropStatus('directory', [], true, 'No FASTA files found in subdirectories');
+                showNotification('No FASTA files found in subdirectories', 'error');
+                return;
+            }
+
+            updateDropStatus('directory', fastaFiles);
+            document.getElementById('processButton').disabled = false;
+            showDirectoryStructure();
+            generatePreview();
+            
+            showNotification(`Successfully loaded ${complexes.size} complex(es) with ${fastaFiles.length} file(s)`, 'success');
+        }
+
+        function handleGroupASelect(event) {
+            const files = Array.from(event.target.files);
+            groupAFiles = files.filter(file => 
+                file.name.toLowerCase().endsWith('.fasta') || 
+                file.name.toLowerCase().endsWith('.fa') || 
+                file.name.toLowerCase().endsWith('.txt')
+            );
+            
+            if (groupAFiles.length === 0) {
+                updateDropStatus('groupA', [], true, 'Please select FASTA files for Group A');
+                showNotification('Please select FASTA files for Group A', 'error');
+                return;
+            }
+            
+            updateDropStatus('groupA', groupAFiles);
+            showNotification(`Group A: Loaded ${groupAFiles.length} file(s)`, 'success');
+            generateAvsBComplexes();
+        }
+
+        function handleGroupBSelect(event) {
+            const files = Array.from(event.target.files);
+            groupBFiles = files.filter(file => 
+                file.name.toLowerCase().endsWith('.fasta') || 
+                file.name.toLowerCase().endsWith('.fa') || 
+                file.name.toLowerCase().endsWith('.txt')
+            );
+            
+            if (groupBFiles.length === 0) {
+                updateDropStatus('groupB', [], true, 'Please select FASTA files for Group B');
+                showNotification('Please select FASTA files for Group B', 'error');
+                return;
+            }
+            
+            updateDropStatus('groupB', groupBFiles);
+            showNotification(`Group B: Loaded ${groupBFiles.length} file(s)`, 'success');
+            generateAvsBComplexes();
+        }
+
+        function updateDropStatus(mode, files, isError = false, message = '', sequenceCount = null) {
+            const statusElement = document.getElementById(mode + 'Status');
+            if (!statusElement) return;
+
+            if (isError) {
+                statusElement.className = 'drop-status error';
+                statusElement.innerHTML = `<div class="summary">❌ ${message}</div>`;
+                statusElement.classList.remove('hidden');
+                return;
+            }
+
+            const fileList = files.map(file => 
+                `<li class="file-item">📄 ${file.name}</li>`
+            ).join('');
+
+            let summary = '';
+            if (mode === 'single') {
+                const seqCount = sequenceCount || files.length;
+                summary = `✅ Loaded ${seqCount} sequence(s) from ${files.length} file(s)`;
+            } else if (mode === 'allvsall') {
+                const seqCount = sequenceCount || files.length;
+                const combinations = (seqCount * (seqCount - 1)) / 2;
+                summary = `✅ Loaded ${seqCount} sequence(s) → ${combinations} pairwise combinations`;
+            } else if (mode === 'groupA') {
+                summary = `✅ Group A: ${files.length} file(s) loaded`;
+            } else if (mode === 'groupB') {
+                summary = `✅ Group B: ${files.length} file(s) loaded`;
+            } else if (mode === 'directory') {
+                summary = `✅ Directory: ${files.length} file(s) in ${complexes.size} complex(es)`;
+            }
+
+            statusElement.className = 'drop-status';
+            statusElement.innerHTML = `
+                <div class="summary">${summary}</div>
+                <ul class="file-list">${fileList}</ul>
+            `;
+            statusElement.classList.remove('hidden');
+        }
+
+        async function handleDroppedFiles(files, mode = 'single') {
+            if (mode === 'groupA') {
+                groupAFiles = await parseAllFiles(files);
+                updateDropStatus('groupA', files);
+                showNotification(`Group A: Loaded ${groupAFiles.length} sequence(s) from ${files.length} file(s)`, 'success');
+                generateAvsBComplexes();
+                return;
+            } else if (mode === 'groupB') {
+                groupBFiles = await parseAllFiles(files);
+                updateDropStatus('groupB', files);
+                showNotification(`Group B: Loaded ${groupBFiles.length} sequence(s) from ${files.length} file(s)`, 'success');
+                generateAvsBComplexes();
+                return;
+            }
+
+            complexes.clear();
+            
+            if (mode === 'single') {
+                // Multiple single-chain inputs mode - each sequence becomes its own "complex"
+                const allSequences = await parseAllFiles(files);
+                allSequences.forEach(seq => {
+                    complexes.set(seq.name, [seq]);
+                });
+                updateDropStatus('single', files, false, '', allSequences.length);
+            } else if (mode === 'allvsall') {
+                // All vs all pairwise comparisons
+                const allSequences = await parseAllFiles(files);
+                generateAllVsAllComplexes(allSequences);
+                updateDropStatus('allvsall', files, false, '', allSequences.length);
+            }
 
             document.getElementById('processButton').disabled = complexes.size === 0;
             showDirectoryStructure();
             generatePreview();
+            
+            const totalSequences = await countTotalSequences(files);
+            showNotification(`Successfully loaded ${totalSequences} sequence(s) from ${files.length} file(s)`, 'success');
+        }
+
+        async function parseAllFiles(files) {
+            const allSequences = [];
+            for (const file of files) {
+                const sequences = await readFastaFile(file);
+                allSequences.push(...sequences);
+            }
+            return allSequences;
+        }
+
+        async function countTotalSequences(files) {
+            const allSequences = await parseAllFiles(files);
+            return allSequences.length;
+        }
+
+        function generateAllVsAllComplexes(sequences) {
+            complexes.clear();
+            let complexCount = 0;
+            
+            for (let i = 0; i < sequences.length; i++) {
+                for (let j = i + 1; j < sequences.length; j++) {
+                    const seq1 = sequences[i];
+                    const seq2 = sequences[j];
+                    const complexName = `${seq1.name}_vs_${seq2.name}`;
+                    complexes.set(complexName, [seq1, seq2]);
+                    complexCount++;
+                }
+            }
+            
+            showNotification(`Generated ${complexCount} pairwise combinations from ${sequences.length} sequences`, 'success');
+        }
+
+        function generateAvsBComplexes() {
+            if (groupAFiles.length === 0 || groupBFiles.length === 0) {
+                return; // Need both groups
+            }
+            
+            complexes.clear();
+            let complexCount = 0;
+            
+            for (const seqA of groupAFiles) {
+                for (const seqB of groupBFiles) {
+                    const complexName = `${seqA.name}_vs_${seqB.name}`;
+                    complexes.set(complexName, [seqA, seqB]);
+                    complexCount++;
+                }
+            }
+            
+            document.getElementById('processButton').disabled = complexes.size === 0;
+            showDirectoryStructure();
+            generatePreview();
+            
+            showNotification(`Generated ${complexCount} A vs B combinations (${groupAFiles.length} × ${groupBFiles.length})`, 'success');
         }
 
         function showDirectoryStructure() {
             let structure = 'Directory Structure:\n';
-            for (const [complex, files] of complexes) {
+            for (const [complex, sequences] of complexes) {
                 structure += `├── ${complex}/\n`;
-                files.forEach((file, index) => {
-                    const prefix = index === files.length - 1 ? '    └── ' : '    ├── ';
-                    structure += prefix + file.name + '\n';
+                sequences.forEach((seq, index) => {
+                    const prefix = index === sequences.length - 1 ? '    └── ' : '    ├── ';
+                    structure += prefix + seq.name + '\n';
                 });
             }
             document.getElementById('directoryStructure').textContent = structure;
@@ -150,17 +590,53 @@
 
         async function readFastaFile(file) {
             const text = await file.text();
+            return parseMultiFasta(text, file.name);
+        }
+
+        function parseMultiFasta(text, fileName = 'unknown') {
+            const sequences = [];
             const lines = text.split('\n');
-            let name = '', sequence = '';
+            let currentName = '';
+            let currentSequence = '';
             
             for (const line of lines) {
-                if (line.startsWith('>')) {
-                    name = line.substring(1).trim();
-                } else {
-                    sequence += line.trim();
+                const trimmedLine = line.trim();
+                if (trimmedLine.startsWith('>')) {
+                    // Save previous sequence if it exists
+                    if (currentName && currentSequence) {
+                        sequences.push({
+                            name: currentName,
+                            sequence: cleanSequence(currentSequence)
+                        });
+                    }
+                    // Start new sequence
+                    currentName = trimmedLine.substring(1).trim();
+                    currentSequence = '';
+                } else if (trimmedLine) {
+                    currentSequence += trimmedLine;
                 }
             }
-            return { name, sequence: cleanSequence(sequence) };
+            
+            // Save the last sequence
+            if (currentName && currentSequence) {
+                sequences.push({
+                    name: currentName,
+                    sequence: cleanSequence(currentSequence)
+                });
+            }
+            
+            // If no sequences found, try as single sequence without header
+            if (sequences.length === 0 && text.trim()) {
+                const cleanedSeq = cleanSequence(text);
+                if (cleanedSeq) {
+                    sequences.push({
+                        name: fileName.replace(/\.(fasta|fa|txt)$/i, ''),
+                        sequence: cleanedSeq
+                    });
+                }
+            }
+            
+            return sequences;
         }
 
         function generateRandomSeeds(count) {
@@ -208,13 +684,8 @@
             const model = document.getElementById('model').value;
             const previewDiv = document.getElementById('preview');
             previewDiv.innerHTML = '';
-            for (const [complexName, files] of complexes) {
-                const sequences = [];
-                for (const file of files) {
-                    const seq = await readFastaFile(file);
-                    sequences.push(seq);
-                }
-                // Remove file extension from complex name
+            for (const [complexName, sequences] of complexes) {
+                // sequences is now an array of sequence objects, not file objects
                 const cleanComplexName = complexName.replace(/\.[^/.]+$/, '');
                 const formatted = formatComplex(sequences, model, cleanComplexName);
                 const formattedPreview = formatted.replace(/"sequence": "([^"]+)"/g, (match, seq) => 
@@ -242,12 +713,8 @@
             try {
                 if (model === 'esmfold') {
                     let combinedContent = [];
-                    for (const [complexName, files] of complexes) {
-                        const sequences = [];
-                        for (const file of files) {
-                            const seq = await readFastaFile(file);
-                            sequences.push(seq);
-                        }
+                    for (const [complexName, sequences] of complexes) {
+                        // sequences is now an array of sequence objects, not file objects
                         const cleanComplexName = complexName.replace(/\.[^/.]+$/, '');
                         combinedContent.push(formatComplex(sequences, model, cleanComplexName));
                     }
@@ -256,13 +723,8 @@
                     const runsElementId = model === 'boltz' ? 'numRuns' : 'chaiRuns';
                     const numRuns = parseInt(document.getElementById(runsElementId).value) || 1;
                     
-                    for (const [complexName, files] of complexes) {
-                        const sequences = [];
-                        for (const file of files) {
-                            const seq = await readFastaFile(file);
-                            sequences.push(seq);
-                        }
-                        
+                    for (const [complexName, sequences] of complexes) {
+                        // sequences is now an array of sequence objects, not file objects
                         const cleanComplexName = complexName.replace(/\.[^/.]+$/, '');
                         const formatted = formatComplex(sequences, model, cleanComplexName);
                         
@@ -278,12 +740,8 @@
                     }
                 } else {
                     // Handle other models (AlphaFold3, etc.)
-                    for (const [complexName, files] of complexes) {
-                        const sequences = [];
-                        for (const file of files) {
-                            const seq = await readFastaFile(file);
-                            sequences.push(seq);
-                        }
+                    for (const [complexName, sequences] of complexes) {
+                        // sequences is now an array of sequence objects, not file objects
                         const cleanComplexName = complexName.replace(/\.[^/.]+$/, '');
                         const formatted = formatComplex(sequences, model, cleanComplexName);
                         const extension = model === 'alphafold3' ? 'json' : 'fasta';
