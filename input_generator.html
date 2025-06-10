@@ -42,6 +42,25 @@
         .skip-link:focus {
             top: 6px;
         }
+        
+        /* Preview styling */
+        .preview-section {
+            min-height: 100px;
+        }
+        
+        .preview-header h4 {
+            margin: 0 0 0.5rem 0;
+            color: #333;
+        }
+        
+        .preview-header .help-text {
+            margin: 0 0 1rem 0;
+            font-style: italic;
+        }
+        
+        .help-text.error {
+            color: #d32f2f;
+        }
     </style>
 </head>
 <body>
@@ -154,10 +173,8 @@
             </div>
 
             <div class="button-group" role="group" aria-label="Output actions">
-                <button class="button" onclick="generateOutput()" aria-describedby="generate-help">Generate Output</button>
                 <button class="button" onclick="saveOutput()" aria-describedby="save-help">Save File</button>
-                <button class="button" onclick="copyToClipboard(document.getElementById('output').textContent)" aria-label="Copy generated output to clipboard" aria-describedby="copy-help">Copy to Clipboard</button>
-                <div id="generate-help" class="help-text sr-only">Creates formatted output based on input sequences and selected model</div>
+                <button class="button" onclick="copyGeneratedOutput()" aria-label="Copy generated output to clipboard" aria-describedby="copy-help">Copy to Clipboard</button>
                 <div id="save-help" class="help-text sr-only">Downloads the generated output as a file</div>
                 <div id="copy-help" class="help-text sr-only">Copies the generated output text to your clipboard</div>
             </div>
@@ -197,17 +214,171 @@
         </fieldset>
 
         <div class="card">
-            <h2>Generated Output:</h2>
-            <div class="code-block">
-                <button class="copy-button" onclick="copyToClipboard(document.getElementById('output').textContent)" aria-label="Copy output code to clipboard">Copy</button>
-                <pre role="region" aria-label="Generated output code" tabindex="0"><code id="output" aria-live="polite"></code></pre>
+            <h2>Generated Output</h2>
+            <div id="preview" class="preview-section" role="region" aria-label="Generated output preview" aria-live="polite">
+                <p class="help-text">Output will appear here after entering sequences and selecting a model.</p>
             </div>
         </div>
     </main>
 
     <script>
+        // Global variable to store the generated output
+        let generatedOutput = '';
+
         function cleanSequence(input) {
             return input.replace(/[^A-Za-z]/g, '').toUpperCase();
+        }
+
+        function truncateSequence(sequence) {
+            return sequence.length > 20 ? sequence.substring(0, 20) + '...' : sequence;
+        }
+
+        function generatePreview() {
+            const model = document.getElementById('model').value;
+            const previewDiv = document.getElementById('preview');
+            
+            // Get sequences and names
+            const sequences = [];
+            const names = [];
+            
+            for (let i = 1; i <= 4; i++) {
+                const seq = document.getElementById(`seq${i}`).value.trim();
+                const name = document.getElementById(`name${i}`).value.trim();
+                
+                if (seq) {
+                    sequences.push(cleanSequence(seq));
+                    names.push(name || `Sequence${i}`);
+                }
+            }
+            
+            if (sequences.length === 0) {
+                previewDiv.innerHTML = '<p class="help-text">Preview will appear here after entering sequences and selecting a model.</p>';
+                return;
+            }
+            
+            let preview = '';
+            const complexName = names.join('_') || 'UnnamedComplex';
+            
+            try {
+                if (model === 'alphafold3') {
+                    const numPredictions = parseInt(document.getElementById('numPredictions').value) || 1;
+                    const useTemplates = document.getElementById('useTemplates').checked;
+                    
+                    const proteinSequences = sequences.map((seq, i) => ({
+                        protein: {
+                            id: String.fromCharCode(65 + i),
+                            sequence: truncateSequence(seq),
+                            templates: useTemplates ? undefined : []
+                        }
+                    }));
+
+                    const jsonOutput = {
+                        name: complexName,
+                        modelSeeds: `[${numPredictions} random seeds]`,
+                        sequences: proteinSequences,
+                        dialect: "alphafold3",
+                        version: 2
+                    };
+                    
+                    preview = JSON.stringify(jsonOutput, null, 2);
+                } else if (model === 'boltz') {
+                    const numRuns = parseInt(document.getElementById('numRuns').value) || 1;
+                    sequences.forEach((seq, i) => {
+                        const chainId = String.fromCharCode(65 + i);
+                        preview += `>${chainId}|protein|\n${truncateSequence(seq)}\n`;
+                    });
+                    if (numRuns > 1) {
+                        preview += `\n(Will generate ${numRuns} identical files with different names)`;
+                    }
+                } else if (model === 'chai') {
+                    const numRuns = parseInt(document.getElementById('chaiRuns').value) || 1;
+                    sequences.forEach((seq, i) => {
+                        preview += `>protein|name=${names[i]}\n${truncateSequence(seq)}\n`;
+                    });
+                    if (numRuns > 1) {
+                        preview += `\n(Will generate ${numRuns} identical files with different names)`;
+                    }
+                } else if (model === 'colabfold' || model === 'esmfold') {
+                    preview = `>${complexName}\n${sequences.map(seq => truncateSequence(seq)).join(':')}`;
+                }
+                
+                const extension = model === 'alphafold3' ? 'json' : 'fasta';
+                const fileName = `${complexName}_${model}.${extension}`;
+                
+                previewDiv.innerHTML = `
+                    <div class="preview-header">
+                        <h4>Output Preview: ${fileName}</h4>
+                        <p class="help-text">Sequences are truncated in preview. Full sequences will be used in actual output.</p>
+                    </div>
+                    <div class="code-block">
+                        <pre><code>${preview}</code></pre>
+                    </div>
+                `;
+            } catch (error) {
+                previewDiv.innerHTML = '<p class="help-text error">Error generating preview. Please check your inputs.</p>';
+            }
+        }
+
+        function ensureOutputGenerated() {
+            if (generatedOutput) return true; // Already generated
+            
+            // Get sequences and names
+            const cleanSequences = [];
+            const names = [];
+            
+            for (let i = 1; i <= 4; i++) {
+                const seq = document.getElementById(`seq${i}`).value.trim();
+                const name = document.getElementById(`name${i}`).value.trim();
+                
+                if (seq) {
+                    // Validate sequence
+                    if (!validateSequenceField(seq, `Sequence ${i}`)) {
+                        return false;
+                    }
+                    cleanSequences.push(cleanSequence(seq));
+                    names.push(name || `Sequence${i}`);
+                }
+            }
+            
+            // Check we have at least one sequence
+            if (cleanSequences.length === 0) {
+                showNotification('Please enter at least one protein sequence', 'error');
+                return false;
+            }
+            
+            // Check we have name for first sequence
+            if (!names[0]) {
+                showNotification('Please enter a name for the first protein', 'error');
+                return false;
+            }
+            
+            const model = document.getElementById('model').value;
+            generatedOutput = generateFullOutput(cleanSequences, names, model);
+            return true;
+        }
+
+        function generateFullOutput(sequences, names, model) {
+            if (model === 'alphafold3') {
+                const numPredictions = parseInt(document.getElementById('numPredictions').value) || 1;
+                return generateAlphaFold3JSON(sequences, names, numPredictions);
+            } else if (model === 'boltz') {
+                let output = '';
+                sequences.forEach((seq, i) => {
+                    const chainId = String.fromCharCode(65 + i);
+                    output += `>${chainId}|protein|\n${seq}\n`;
+                });
+                return output;
+            } else if (model === 'chai') {
+                let output = '';
+                sequences.forEach((seq, i) => {
+                    output += `>protein|name=${names[i]}\n${seq}\n`;
+                });
+                return output;
+            } else if (model === 'colabfold' || model === 'esmfold') {
+                const complexName = names.join('_') || 'UnnamedComplex';
+                return `>${complexName}\n${sequences.join(':')}`;
+            }
+            return '';
         }
 
         function handleModelChange() {
@@ -215,14 +386,53 @@
             const af3options = document.getElementById('af3options');
             const boltzoptions = document.getElementById('boltzoptions');
             const chaioptions = document.getElementById('chaioptions');
-            af3options.style.display = model === 'alphafold3' ? 'block' : 'none';
-            boltzoptions.style.display = model === 'boltz' ? 'block' : 'none';
-            chaioptions.style.display = model === 'chai' ? 'block' : 'none';
+            
+            // Show/hide option sections based on model
+            af3options.classList.toggle('hidden', model !== 'alphafold3');
+            boltzoptions.classList.toggle('hidden', model !== 'boltz');
+            chaioptions.classList.toggle('hidden', model !== 'chai');
+            
+            generatedOutput = '';
+            generatePreview();
         }
 
         // Call handleModelChange on page load to set initial state
         document.addEventListener('DOMContentLoaded', function() {
             handleModelChange();
+            generatePreview();
+            
+            // Add event listeners for real-time preview updates
+            ['seq1', 'seq2', 'seq3', 'seq4', 'name1', 'name2', 'name3', 'name4'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('input', () => {
+                        generatedOutput = ''; // Clear generated output when inputs change
+                        generatePreview();
+                    });
+                }
+            });
+            
+            // Update preview when model or options change
+            document.getElementById('model').addEventListener('change', () => {
+                generatedOutput = '';
+                generatePreview();
+            });
+            document.getElementById('numPredictions').addEventListener('input', () => {
+                generatedOutput = '';
+                generatePreview();
+            });
+            document.getElementById('useTemplates').addEventListener('change', () => {
+                generatedOutput = '';
+                generatePreview();
+            });
+            document.getElementById('numRuns').addEventListener('input', () => {
+                generatedOutput = '';
+                generatePreview();
+            });
+            document.getElementById('chaiRuns').addEventListener('input', () => {
+                generatedOutput = '';
+                generatePreview();
+            });
         });
 
         function generateRandomSeeds(count) {
@@ -253,148 +463,92 @@
             return JSON.stringify(jsonOutput, null, 2);
         }
 
-        function generateOutput() {
-            return safeExecute(() => {
-                const generateButton = document.querySelector('button[onclick="generateOutput()"]');
-                showLoadingState(generateButton, 'Generating...');
-
-                try {
-                    // Validate required fields
-                    const seq1 = document.getElementById('seq1').value.trim();
-                    const name1 = document.getElementById('name1').value.trim();
-                    
-                    if (!validateRequiredField(seq1, 'Sequence 1')) {
-                        return;
-                    }
-                    if (!validateRequiredField(name1, 'Protein Name 1')) {
-                        return;
-                    }
-                    
-                    // Validate all sequences
-                    const sequences = [
-                        { element: document.getElementById('seq1'), name: 'Sequence 1' },
-                        { element: document.getElementById('seq2'), name: 'Sequence 2' },
-                        { element: document.getElementById('seq3'), name: 'Sequence 3' },
-                        { element: document.getElementById('seq4'), name: 'Sequence 4' }
-                    ];
-                    
-                    let allValid = true;
-                    sequences.forEach(seq => {
-                        const value = seq.element.value.trim();
-                        if (value && !validateSequenceField(value, seq.name)) {
-                            seq.element.classList.add('error');
-                            allValid = false;
-                        } else {
-                            seq.element.classList.remove('error');
-                            if (value) seq.element.classList.add('success');
-                        }
-                    });
-                    
-                    if (!allValid) {
-                        showNotification('Please fix validation errors before generating', 'error');
-                        return;
-                    }
-
-                    const seqs = [
-                        { sequence: cleanSequence(document.getElementById('seq1').value.trim()), name: document.getElementById('name1').value.trim() },
-                        { sequence: cleanSequence(document.getElementById('seq2').value.trim()), name: document.getElementById('name2').value.trim() },
-                        { sequence: cleanSequence(document.getElementById('seq3').value.trim()), name: document.getElementById('name3').value.trim() },
-                        { sequence: cleanSequence(document.getElementById('seq4').value.trim()), name: document.getElementById('name4').value.trim() }
-                    ].filter(item => item.sequence);
-
-                    const sequences = seqs.map(item => item.sequence);
-                    const names = seqs.map(item => item.name);
-                    const model = document.getElementById('model').value;
-                    let output = '';
-
-                    if (model === 'alphafold3') {
-                        const numPredictions = parseInt(document.getElementById('numPredictions').value) || 1;
-                        output = generateAlphaFold3JSON(sequences, names, numPredictions);
-                    } else if (model === 'boltz') {
-                        seqs.forEach((item, i) => {
-                            const chainId = String.fromCharCode(65 + i);
-                            output += `>${chainId}|protein|\n${item.sequence}\n`;
-                        });
-                    } else if (model === 'chai') {
-                        seqs.forEach((item, i) => {
-                            output += `>protein|name=${item.name || `Sequence${i + 1}`}\n${item.sequence}\n`;
-                        });
-                    } else if (model === 'colabfold' || model === 'esmfold') {
-                        const complexName = names.filter(n => n).join('_') || 'UnnamedComplex';
-                        output += `>${complexName}\n${sequences.join(':')}\n`;
-                    }
-
-                    document.getElementById('output').textContent = output;
-                    showNotification('Output generated successfully!', 'success');
-                } finally {
-                    hideLoadingState(generateButton);
-                }
-            }, 'Failed to generate output');
-        }
 
         async function saveOutput() {
-            const output = document.getElementById('output').textContent;
-            if (!output.trim()) {
-                alert('Please generate output before saving.');
+            return safeExecute(async () => {
+                const saveButton = document.querySelector('button[onclick="saveOutput()"]');
+                showLoadingState(saveButton, 'Saving...');
+
+                try {
+                    // Auto-generate output if needed
+                    if (!ensureOutputGenerated()) {
+                        return;
+                    }
+
+                    const model = document.getElementById('model').value;
+                    const names = [
+                        document.getElementById('name1').value.trim(),
+                        document.getElementById('name2').value.trim(),
+                        document.getElementById('name3').value.trim(),
+                        document.getElementById('name4').value.trim()
+                    ].filter(name => name);
+
+                    const complexName = names.join('_') || 'UnnamedComplex';
+
+                    if (model === 'boltz') {
+                        const numRuns = parseInt(document.getElementById('numRuns').value) || 1;
+                        if (numRuns > 1) {
+                            const zip = new JSZip();
+                            
+                            // Create multiple files with run numbers and model name
+                            for (let i = 1; i <= numRuns; i++) {
+                                const runNumber = String(i).padStart(3, '0');
+                                const fileName = `${complexName}_boltz_run_${runNumber}.fasta`;
+                                zip.file(fileName, generatedOutput);
+                            }
+
+                            // Generate and download zip file
+                            const blob = await zip.generateAsync({type: "blob"});
+                            const a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob);
+                            a.download = `${complexName}_boltz_runs.zip`;
+                            a.click();
+                            URL.revokeObjectURL(a.href);
+                            showNotification(`Downloaded ${numRuns} Boltz run files`, 'success');
+                            return;
+                        }
+                    } else if (model === 'chai') {
+                        const numRuns = parseInt(document.getElementById('chaiRuns').value) || 1;
+                        if (numRuns > 1) {
+                            const zip = new JSZip();
+                            for (let i = 1; i <= numRuns; i++) {
+                                const runNumber = String(i).padStart(3, '0');
+                                const fileName = `${complexName}_chai_run_${runNumber}.fasta`;
+                                zip.file(fileName, generatedOutput);
+                            }
+                            const blob = await zip.generateAsync({type: "blob"});
+                            const a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob);
+                            a.download = `${complexName}_chai_runs.zip`;
+                            a.click();
+                            URL.revokeObjectURL(a.href);
+                            showNotification(`Downloaded ${numRuns} Chai run files`, 'success');
+                            return;
+                        }
+                    }
+
+                    // Default single file save behavior
+                    const extension = model === 'alphafold3' ? 'json' : 'fasta';
+                    const fileName = `${complexName}_${model}.${extension}`.replace(/\s+/g, '_');
+                    const blob = new Blob([generatedOutput], { type: 'text/plain' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = fileName;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    showNotification(`Downloaded ${fileName}`, 'success');
+                } finally {
+                    hideLoadingState(saveButton);
+                }
+            }, 'Failed to save output');
+        }
+
+        function copyGeneratedOutput() {
+            // Auto-generate output if needed
+            if (!ensureOutputGenerated()) {
                 return;
             }
-
-            const model = document.getElementById('model').value;
-            const names = [
-                document.getElementById('name1').value.trim(),
-                document.getElementById('name2').value.trim(),
-                document.getElementById('name3').value.trim(),
-                document.getElementById('name4').value.trim()
-            ].filter(name => name);
-
-            const complexName = names.join('_') || 'UnnamedComplex';
-
-            if (model === 'boltz') {
-                const numRuns = parseInt(document.getElementById('numRuns').value) || 1;
-                if (numRuns > 1) {
-                    const zip = new JSZip();
-                    
-                    // Create multiple files with run numbers and model name
-                    for (let i = 1; i <= numRuns; i++) {
-                        const runNumber = String(i).padStart(3, '0');
-                        const fileName = `${complexName}_boltz_run_${runNumber}.fasta`;
-                        zip.file(fileName, output);
-                    }
-
-                    // Generate and download zip file
-                    const blob = await zip.generateAsync({type: "blob"});
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = `${complexName}_boltz_runs.zip`;
-                    a.click();
-                    return;
-                }
-            } else if (model === 'chai') {
-                const numRuns = parseInt(document.getElementById('chaiRuns').value) || 1;
-                if (numRuns > 1) {
-                    const zip = new JSZip();
-                    for (let i = 1; i <= numRuns; i++) {
-                        const runNumber = String(i).padStart(3, '0');
-                        const fileName = `${complexName}_chai_run_${runNumber}.fasta`;
-                        zip.file(fileName, output);
-                    }
-                    const blob = await zip.generateAsync({type: "blob"});
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = `${complexName}_chai_runs.zip`;
-                    a.click();
-                    return;
-                }
-            }
-
-            // Default single file save behavior
-            const extension = model === 'alphafold3' ? 'json' : 'fasta';
-            const fileName = `${complexName}_${model}.${extension}`.replace(/\s+/g, '_');
-            const blob = new Blob([output], { type: 'text/plain' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = fileName;
-            a.click();
+            copyToClipboard(generatedOutput);
         }
 
         // Setup FASTA file drop zones for sequence inputs
